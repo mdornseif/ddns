@@ -1,40 +1,50 @@
 ERRORS
-* ddnsd-file.man
-* install scripts
+* create html-pages
+* stat(2) seems to be completly freaked out on my LinuxPPC, find out why.
+* limits
+* ddnsd-aclwriter-conf.8
+* ddnsd-aclwriter.8
+* empty lines in fifo
+* tcprules
 
 CLEANUPS
-* rename ddns-cleand to ddnsd-cleand
-* defaults in ddns-clientd
-* clean up sig.*
-* clean up loc.* / get rid of sprintf()
+* README
+* proofreading of man pages
+* ddns-clientd: defaults
+* ddns-clientd, ddns-cleand: clean up sig.*
 * clean up sourcecode
-* clean up log/error messages
+* ddnsd, filedns, ddns-clientd: clean up log/error messages
 * -Wall
 * check behaviour under error-conditions
-* README
-* check ddns-cleand
-* proofreading of man pages
-* unify parsing of fields in fieldsep.c
-* change semantics of timestamping so ddns-cleand doesn't 
-  have to read from data.cdb (P)
-* ddnsd-cleand needs serious tuning
-* droprootordie() in filedns
+* filedns, ddns-cleand: unify the parsing of ddns-file(5) 
+* ddnsd-cleand: tuning
+* filedns: droprootordie()
+* ddnsd: get rid of lost tmp/files 
+* filedns, ddns-cleand, ddns-clientd, ddnsd-cdbwrite: check for memory leaks
+* filedns.8: document X
+* ddnsd: loc handling
 
 FEATURES
-* retry connection to server in client
-* check for changed IP while renewing
-* automatic ip-determination/checking in ddns-clientd
-* make ddns-clientd commandline more flexible
-* unify the parsing of dnsfiles in filedns and ddns-cleand
+* ddns-cdbout
+* ddnsd-aclwriter should create directly a cdb
+* ddnsd, ddns-cleand: a way to lock entrys (sticky bit?)
+* use libdjb
+* filedns: SOA handling
+* ddns-clientd: make commandline more flexible
+* ddns-clientd: -q -v parameter
 * use timeout for all calls which could block forever. (NFS stuff etc.)
-* a way to lock entrys
-* SOA handling in filedns
-* support for round-robbin dns of the server ip in ddns-clientd
-* support for ipv6 as a transport in ddns-clientd, ddnsd and filedns
-* create an action daemon
+* ddns-clientd: support for round-robbin dns / multiple adresses of the server ip 
+* ddns-clientd, ddnsd, filedns: support for ipv6 as a transport
+* ddns-bindupo
+* ddns-ipfwo
+* ddns-ipchaino
+* ddns-slaveo 
+* ddns-bindout
+* ddns-tinout
+* ddns-dxfsout
 
 BLUE SKY
 * UDP as a transport
 * use multiple servers which are connected by multicast
-* support for mutiple zones in filedns ?
-* multiplatform client
+* support for mutiple zones in filedns/ddnsd ?
+* multiplatform GUI client

@@ -2,10 +2,10 @@ CLIENT
 
 * ddns-client is started with IPv4 and IPv6 Address and LOC in the
   commandline it uses tcpclient and ddnsc to register at the
-  server. Then it sleeps for leadetime-17 renews the registration and
-  starts over sleeping. 
+  server. Then it sleeps for leasetime-17 renews the registration and
+  starts over sleeping.
 
-* If ddns-clientd recives a SIGTERM it deregisters at the server 
+* If ddns-clientd recives a SIGTERM it deregisters at the server
   and exits.
 
 
@@ -36,6 +36,9 @@ ddnsd
 
 * if it is a killentryrequest is deletes DOT/ZONEDIR/HOSTN
 
+* it opens every fifo /named pipe in tracedir/ and writes information
+  about its action, then quits. 
+
 
 ddns-cleand
 
@@ -60,7 +63,7 @@ filedns
   this file and deliver the data found in there to the client.
 
 Example directorystructure:
- 
+
 ROOT (for ddnsd and ddns-cleand) = /whatever/root/
 DOT = dot
 ZONEDIR = cx/rc23/dyn
@@ -76,7 +79,7 @@ for zone "dyn.rc23.cx" should be provided at c0re.rc23.cx do:
 
 ROOT=/whatever/root envuidgid ddnsw ddnsd dot/cx/rc23/dyn
 ROOT=/whatever/root envuidgid ddnsw ddns-cleand dot
-ROOT=/whatever/root/dot envuidgid ddnsr filedns 
+ROOT=/whatever/root/dot envuidgid ddnsr filedns
 
 logging will be done by all three programms to stdout so they will be
 run best with daemontolls and supervise.
@@ -90,3 +93,98 @@ ddnsd-data
 * reads data from stdin creating data.cdb.  the data is oriented
   linewise and contains comma seperated fields.  uid,shared
   secret,hostn,ttl.
+
+
+ddns-snapd
+
+* creates a fifo tracedir/snapd; it then reads all data from
+dot/zone/ into an in-memory tree structure and listens on the fifo for
+changes to the database which will be incooperated into the tree. Every 
+23 seconds it checks if the tree has changed and if so runs all programs 
+in snapdir. All this programs can read the complete database from stdin.
+
+
+output tools
+
+there are several tools converting the data aquired by ddns for other 
+aplications. realtime processors create a fifo in tracedir/ and process
+every single change without further delay. batch processors are in snapdir/
+and will be called once a while to process the whole database.
+
+
+realtime processors
+
+* ddns-bindupo sends dynamic updates to a dns server which understands 
+  such requests (like bind)
+
+* ddns-ipfwo changes (BSD) ip firewall rules according to the database
+
+* ddns-ipchaino does the same for Linux ipchains
+
+* ddns-slaveo feeds a ddns slave server.
+
+
+batch processors
+
+* ddns-cdbout writes a cdb suitable for tcpserver
+
+* ddns-bindout writes a bind zonefile
+
+* ddns-tinout writes a tinydnszonefile
+
+* ddns-dxfsout transfers the data via DXFR to another server.
+  DXFR is a striped down AXFR using encryption, compression and
+  a push-concept.
+
++------------+       +-----------+
+|DDNS-CLIENTD|<=====>| TCPSERVER |
++------------+       +-----------+
+                     |   DDNSD   |-----------------
+                     +-----------+                |
+		      /|\    /|\                  |
+		       |      |	                  |
+		      \|/     |	                 \|/
+             +-----------+ +----------+ +------+ +-----------+
+             | dot/zone/ | | data.cdb | | data | | tracedir/ |-+
+             +-----------+ +----------+ +------+ +-----------+ |
+	          |    /|\   |    /|\     |      /|\ | | | |   |
+	          | 	|    |     |      |	  |  | | | |   |
+	         \|/	|    |     |     \|/	  |  | | | |   |
+	    +---------+ |    | +------------+	  |  | | | |   |
+      	    | FILEDNS | |    | | DDNSD-DATA |	  |  | | | |   |
+            +---------+ |    | +------------+	  |  | | | |   |
+			|    |          	  |  | | | |   |
+		       \|/  \|/	        	  |  | | | |   |
+		   +-------------+      	  |  | | | |   |
+		   | DDNS-CLEAND |----------------+  | | | |   |
+		   +-------------+      	     | | | |   |
+           		                	     | | | |   |
+                                 +--------------+    | | | |   |
+                                 | DDNS-BINDUPO |<---+ | | |   |
+                                 +--------------+      | | |   |
+		                  +------------+       | | |   |
+	                          | DDNS-IPFWO |<------+ | |   |
+	                          +------------+       	 | |   |
+			        +---------------+      	 | |   |
+	 	                | DDNS-IPCHAINO |<-------+ |   |
+			        +---------------+	   |   |
+      +-------------+            +-------------+ 	   |   |
+      | DDNS-SLAVED |<===========| DDNS-SLAVEO |<----------+   |
+      +-------------+            +-------------+	       |
+	                                        	       |
+       +--------------+       +----------+     +------------+  |
+       | DDNS-DXFROUT |<------| snapdir/ |<----| DDNS-SNAPD |<-+
+       +--------------+       +----------+     +------------+
+       +-------------+	       	| | |
+       | DDNS-CDBOUT |<---------+ | |
+       +-------------+		  | |
+       +--------------+		  | |
+       | DDNS-BINDOUT |<----------+ |
+       +--------------+		    |
+       +-------------+		    |
+       | DDNS-TINOUT |<-------------+
+       +-------------+
+
+
+instead of ddnsd you can run ddns-slaved which wouldn't allow updates from 
+clients but from ddns-slaveo
