@@ -15,7 +15,7 @@ ddns-cleand: ddns-cleand.o scan_xlong.o \
 sig_alarm.o sig_block.o sig_catch.o now.o dnscache.a libtai.a 
 	gcc -o $@ ddns-cleand.o scan_xlong.o sig_alarm.o sig_block.o sig_catch.o now.o dnscache.a libtai.a 
 
-ddnsc: ddnsc.o fmt_xint.o fmt_xlong.o rijndael.o mt19937.o dnscache.a libtai.a 
+ddnsc: ddnsc.o fmt_xint.o fmt_xlong.o rijndael.o mt19937.o pad.o txtparse.o dnscache.a libtai.a 
 	gcc -o $@ $^
 
 ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libtai.a
