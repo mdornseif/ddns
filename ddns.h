@@ -1,8 +1,11 @@
-/* $Id: ddns.h,v 1.1 2000/04/19 07:01:48 drt Exp $
+/* $Id: ddns.h,v 1.2 2000/04/24 16:27:26 drt Exp $
  *
  * $Log: ddns.h,v $
- * Revision 1.1  2000/04/19 07:01:48  drt
- * Initial revision
+ * Revision 1.2  2000/04/24 16:27:26  drt
+ * added ENOENTRYUSED
+ *
+ * Revision 1.1.1.1  2000/04/19 07:01:48  drt
+ * initial ddns version
  *
  */
 
@@ -20,13 +23,14 @@
 #define DDNS_T_SETENTRY        3               
 #define DDNS_T_RENEWENTRY      4
 #define DDNS_T_KILLENTRY       5
-#define DDNS_T_EPROTERROR      6               /* generic protocoll error */
+#define DDNS_T_EPROTERROR      6               /* generic protocol error */
 #define DDNS_T_EWRONGMAGIC     7               /* wrong magic token */
 #define DDNS_T_ECANTDECRYPT    8               /* can't decrypt packet */
 #define DDNS_T_EALLREADYUSED   9               /* client requsted to set something which is already set */
 #define DDNS_T_ESERVINT        10              /* internal server error */
 #define DDNS_T_EUNKNOWNUID     11              /* client sent unknown uid */
 #define DDNS_T_EUNSUPPTYPE     12              /* unknown or unsupported type in this situation */
+#define DDNS_T_ENOENTRYUSED    13              /* client requsted to renew/kill something which is not set */
 
 struct ddnsrequest {
   uint32 uid;
