@@ -1,36 +1,32 @@
-BETA 0.01
+BETA 0.01 "hak nam"
 
 ERRORS
-* stat(2) seems to be completly freaked out on my LinuxPPC, find out why.
-* ddns-pipe.5
-* ddns-file-5
-* ddns-snapd-conf.8
-* ddns-snapd.8
-* ddns-ipfwo.8
-* ddns-ipfwo-conf.8
+* XXX.8
 * setup-server.sh
+* ddns-clientd with strange parameters
 
 CLEANUPS
-* README
-* proofreading of man pages
 * filedns, ddns-cleand: unify the parsing of ddns-file(5) 
-* ddnsd: get rid of lost tmp/files 
 * filedns.8: document all
-* ddnsd: log pid
-* ddns-ipfwo: seperate into different files
+* ddnsd: linebreaks, ttl
+* proofreading of man pages ddnsd.8 filedns.8 ddns-cleand.8 ddns-ipfwo.8 ddns-clientd.8
+  ddnsd-conf.8 filedns-conf.8 ddns-cleand.conf.8 ddns-ipfwo-conf.8
 
 FEATURES
 * ddns-clientd: one shot mode
-* use libdjb/split distribution into directorys
-* ddns-clientd, ddns-cleand: clean up sig.*
-* ddns-cdbout
 * ddns-ipfwo: read whole database at startup
+* add hostname to s-record
+* ddns-cleand: ddns-pipe(5)
 
-*****
-
-VERSION 0.02
+***
+0.02 "rage"
 
 CLEANUPS
+* seperate cdbs
+* ddns-cdbout
+* add section FILES and BUGS to all manpages
+* ddns-snapd-conf.8
+* ddns-snapd.8
 * all long runbning daemons: check for memory/filedescriptor leaks
 * ddns-ipfwo: distinguishing between linux freebsd & co
 * clean up sourcecode
@@ -44,6 +40,8 @@ CLEANUPS
 * check behaviour under error-conditions
 * filedns, ddns-clientd and ddns-snapd are to long
 * permissions
+* ddnsd: get rid of lost tmp/files 
+* ddns-ipfwo: seperate into different files
 
 FEATURES
 * ddnsd-cleand: tuning

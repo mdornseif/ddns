@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.11 2000/08/02 20:13:22 drt Exp $
+/* $Id: ddns-clientd.c,v 1.12 2000/10/06 22:01:44 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
@@ -8,6 +8,9 @@
  * This file is to long!
  *
  * $Log: ddns-clientd.c,v $
+ * Revision 1.12  2000/10/06 22:01:44  drt
+ * Library reorganisation
+ *
  * Revision 1.11  2000/08/02 20:13:22  drt
  * -V
  *
@@ -84,7 +87,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.11 2000/08/02 20:13:22 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.12 2000/10/06 22:01:44 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 #define ARGV0 "ddns-clientd: "
@@ -375,10 +378,10 @@ void doit(void)
     }
 
   // catch SIGTERM & SIGINT
-  sig_termcatch(sigterm);
-  sig_intcatch(sigterm);
-  // ignore SIGALRM
-  sig_alarmcatch(sigalrm);
+  sig_catch(sig_term, sigterm);
+  sig_catch(sig_int, sigterm);
+  // catch SIGALRM
+  sig_catch(sig_alarm, sigalrm);
 
   for(;;)
     {
@@ -474,9 +477,9 @@ int main(int argc, char *argv[])
     strerr_die2x(111, FATAL, "server address not set (try $DDNS_SERVER_ADDR)");
   
   if (!stralloc_copys(&svasa, sva)) 
-    die_nomem();
+	die_nomem();
   if (dns_ip4_qualify(&serversa, &fqdn, &svasa) == -1)
-    strerr_die4sys(111, FATAL, "temporarily unable to figure out IP address for ", sva, ": ");
+	strerr_die4sys(111, FATAL, "temporarily unable to figure out IP address for ", sva, ": ");
   if (serversa.len < 4)
     strerr_die3x(111, FATAL, "no IP address for ", sva);
   serverip = serversa.s;

@@ -1,9 +1,12 @@
-/* $Id: ddnsd_renewentry.c,v 1.1 2000/07/31 19:03:18 drt Exp $
+/* $Id: ddnsd_renewentry.c,v 1.2 2000/10/06 22:03:15 drt Exp $
  *  -- drt@ailis.de - http://rc23.cx/
  *
  * (K)allisti 2000 a.D. - all rights reversed
  *
  * $Log: ddnsd_renewentry.c,v $
+ * Revision 1.2  2000/10/06 22:03:15  drt
+ * Library reorganisation
+ *
  * Revision 1.1  2000/07/31 19:03:18  drt
  * initial revision
  *
@@ -48,14 +51,10 @@ void ddnsd_renewentry( struct ddnsrequest *p, uint32 *ttl, stralloc *username)
     }
   
   /* update ctime */
-  //  XXX: for some reason this doesn't work, my Linux seems to be mixed up
   ut.actime = st.st_atime;
   ut.modtime = st.st_mtime;
   
   if(utime(tmpname.s, &ut) == -1)
-    ddnsd_send_err_sys(p->uid, tmpname.s);
-    
-  if(utime(tmpname.s, NULL) == -1)
     ddnsd_send_err_sys(p->uid, tmpname.s);
 
   ddnsd_log(p->uid, "renewing entry");

@@ -1,0 +1,79 @@
+.TH ddnsd-ipfwo.linux 8
+.SH NAME
+ddnsd-ipwo.linux \- dynamically rewrites firewall rules according to 
+actual IPs of ddns users.
+.SH SYNOPSIS
+.B ddnsd-ipfwo.linux
+.SH DESCRIPTION
+.B ddnsd-ipfwo.linux 
+XXX
+.P
+.B Upon startup 
+.B ddns-ipfwo.linux
+will 
+.IR chroot (3)
+to the directory
+.IR $WORKDIR / tracedir .
+It then drops privileges to the group set by
+.IR $GID .
+All files will be created with the owner set by 
+.IR $UID .
+.P
+.B ddnsd-ipfwo.linux  
+will create a firewall chain called 
+.I ddns-ok 
+and add 
+a rule to this chain which will ACCEPT all traffic.
+If the chain ddna-ok already exists no modifications 
+will be made to this chain.
+.P
+It creates a chain 
+.I ddns 
+or flushes it, if it already exists. 
+.B ddnsd-ipfwo.linux  
+creates a named pipe called 
+.I ddns-ipfwo.linux
+and listens for input acording to 
+.BR ddns-pipe (5)
+on this fifo.
+For every 
+.I SETENTRY
+command it will add an entry to the
+.I ddns 
+chain for packets with the source address of the client
+and any destination which will branch to the chain
+.IR ddns-ok .
+.P
+For every 
+.I KILLENTRY 
+and
+.I EXPIREENTRY
+command ddns will remove the corrospondending rule.
+.P 
+.I RENEWENTRY 
+commands are ignored.
+.P
+.I ddns-ipfwo.linux
+logs to stderr and is well suited to run together with
+.IR multilog (8)
+under
+.IR svscan (8).
+.SH BUGS
+.I ddns-ipfwo.linux
+doesn't clean rules upon exiting;; it doesn't even remove its fifo.
+.I ddns-ipfwo.linux
+should read in all 
+.IR ddns-file (8) 
+data upon startup and create firewall rules accordingly.
+.P
+.I ddns-ipfwo.linux
+runs as root to be able to change the firewall rules. This is a security risk -
+ddns should at least drop capabilitys to just 
+.IR CAP_NET_ADMIN.
+.P
+.SH AUTHOR
+Doobee R. Tzeck <drt@ailis.de>
+.P
+.SH SEE ALSO
+multilog(8), ddns-clientd(8), ddnsd-data(8),
+http://rc23.cx/ddns/

@@ -1,9 +1,12 @@
-/* $Id: ddnsd_setentry.c,v 1.1 2000/07/31 19:03:18 drt Exp $
+/* $Id: ddnsd_setentry.c,v 1.2 2000/10/06 22:03:15 drt Exp $
  *  -- drt@ailis.de - http://rc23.cx/
  *
  * (K)allisti 2000 a.D. - all rights reversed
  *
  * $Log: ddnsd_setentry.c,v $
+ * Revision 1.2  2000/10/06 22:03:15  drt
+ * Library reorganisation
+ *
  * Revision 1.1  2000/07/31 19:03:18  drt
  * initial revision
  *
@@ -34,7 +37,7 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd_setentry.c,v 1.1 2000/07/31 19:03:18 drt Exp $";
+static char rcsid[] = "$Id: ddnsd_setentry.c,v 1.2 2000/10/06 22:03:15 drt Exp $";
 
 /* handle a setentryrequest */
 void ddnsd_setentry(struct ddnsrequest *p, uint32 *ttl, stralloc *username)
@@ -56,6 +59,7 @@ void ddnsd_setentry(struct ddnsrequest *p, uint32 *ttl, stralloc *username)
   char strip6[IP6_FMT];
   char tb[16];
   
+  // XXX this should be a seperate function 
   /* create a temporary name */
   host[0] = 0;
   gethostname(host,sizeof(host));

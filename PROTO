@@ -23,27 +23,62 @@ The designgoals of ddns were
 
 -----[ Encryption ]-----
 
+----- Threat model and overview -----
+
+ddns uses encryption to provide strong authentication of both sides.
+This is done by symetrically encrypting the whole transmission with a
+secret shared between client and server. By watching the connection
+without the secret key an attacker shouldn't be able to gain as little
+information as possible.
+
+----- Reasons for not using an established Protocol -----
+
+ddns should be optimized vor low speed high latency lines. This means
+that we can affort only on packet exchange (UDP) or 3 packet exchanges
+(TCP). All established protocols known to the author require more than
+that.
+
+----- Implementation Details -----
+
 ddns uses datapackets with 68 Bytes size consisting of a 32 bit userid
 and a 512 rijndael encrypted payload.
 
-the payload is encrypted as two bolcks of 256 bit encrypted in ECB
+the payload is encrypted as two bolcks of 256 bits encrypted in ECB
 mode with the same 256 bit key. I didn't use chaining because this would
 incerase the size of the packets.
 
 To make known plaintext attacks harder the payload contains at least
 16 bits of random data in the first and the second half of the (512
-bit) packet so both (256 bit) rijndael blocks get some entropy.
+bit) packet so both of the (256 bit) rijndael blocks get some entropy.
 
 To counter replay attacks each datapacket contains a timestamp with
-high resulution and a 16 bit random number must be present in the first and
-in the second half so bombining blocks of different packages isn't
-easy.
+high resulution and the same 16 bit random number must be present in
+the first and in the second half so combining blocks of different
+packages isn't easy.
 
 The packets contain a 32 bit magic token to check if decryption
-contained something sensible. If a packet encrypts to something
-sensibe the user is authentificated.
+contained something sensible. If a packet has a valid magic number
+after decryption the user is considered authentificated.
 
------[ Overviev ]-----
+----- Known Problems -----
+
+By sending the UID in clear an attacker can identify certain users
+although he can't gain Information on the domainname used. I see no
+wai to circumvent this problem using secret key encryption and having
+a different Secret for each user.
+
+The server has to store all secrets in cleartext. This makes them
+endangered of theft leading to total compromise of the system. At
+least it must be guaranteed that users don't reuse paswords. This
+could be done by assigning them random generated Passwords.
+
+Using ECB has disadvantages. I have choosen rijndael because it could
+be easyly extendet to 512 bit blocksize. This might be a good idea but
+on the other hand there are no test vektors for 512 bit rijndael and I
+now of no cryptoanalisis of it.
+
+
+-----[ Protocol Overviev ]-----
 
 The user of the client and the operater of the Server are
 expected to have negotiated a 32 bit userid, a 256 bit shared

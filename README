@@ -1,28 +1,32 @@
-Setting up a client:
+This is Relase 0.1 "Hak-Nam" of ddns.
+Up to now the client and the basic server components are 
+tested and usable. ddns-clientd, ddnsd, ddns-cleand, filedns
+and ddns-ipfw0 should be usable without significant Problems.
+
+SETTING UP A CLIENT
 
 Go to the ddns directory and type
 $ make client
 $ sudo make setup-client
 
-The buildprocess will fetch three files from the internet using wget.
-If you don't have wget installed you have to edit the Makefile.
+The buildprocess will fetch files from the internet using wget.
+If you don't have wget installed you have to edit the Makefile
+to use another tool for fetching files via http.
 
-You have know your DDNS-UID (100 in this example) and your shared
-secret ('superNikNik' in theis example.  After you fired up your
+You have to know your DDNS-UID (100 in this example) and your shared
+secret ('superNikNik' in this example).  After you fired up your
 internet connection try someting like
 
-$ DDNS_SERVER_ADDR=c0re.rc23.cx \
-  DDNS_SERVER_PORT=3456 \
-  DDNS_UID=100 \
-  KEY="superNikNik" \ 
-  ./ddns-clientd 1.2.3.4 0 50 57 9.7 N 6 54 08.3 E 5700 5000 1500 5000
+$ DDNS_SERVER_ADDR=c0re.rc23.cx DDNS_SERVER_PORT=3456 \
+  DDNS_UID=100 KEY=superNikNik \ 
+  /usr/local/bin/ddns-clientd 0.0.0.1 0 50 57 9.7 N 6 54 08.3 E 5700 5000 1500 5000
 
-This assumes your IP is 1.2.3.4 and you have no IPv6 Address, which
-means 0.  Your Location is Vogelsangerstr. 286 in Cologne at 57m
-altitude and your facility is 50m in diameter. The Number is acurate
-to 15m in horizontal and 50m in vertical direction.  The last three
-numbers can be left out. I assume you use a ddns Server running at
-c0re.rc23.cx:3456.
+This assumes you have no IPv6 Address, which means 0.  Your Location
+is Vogelsangerstr. 286 in Cologne at 57m altitude and your facility is
+50m in diameter. The Number is acurate to 15m in horizontal and 50m in
+vertical direction.  The last three numbers can be left out. I assume
+you use a ddns Server running at c0re.rc23.cx:3456. 0.0.0.1 will be 
+changed by ddns-clientd to your actual IP address.
 
 ddns-clientd will now connect to the server and register there. It
 will sleep a server specified amount of time (at the moment 90s) and
@@ -45,16 +49,12 @@ You can insert ddns-clientd in the script you use for fireing up
 your internet connection and put a "killall ddns-clientd; sleep 2" 
 in your internet down script yust before you shutdown the connection.
 
-I use 
 
-./ddns/ddns-clientd `netstat -i -n | grep "isp0  1500  0" | cut -b 27-41` 0 50 57 9.7 N 6 54 08.3 E 5700 1500 7500
+SETTING UP A SERVER
 
-on my freebsd-4.0 box to insert automagically my actual IPv4
-address.
-
-
-
-... more to follow
+ddnsd can be used to flexibly build a lot of different dynamic dns system.
+See OVERVIEW for an introducion of what talks to whom. Have a look into
+examples there is a script which will set up a dasic server suite for you.
 
 drt@ailis.de
 

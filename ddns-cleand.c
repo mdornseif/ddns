@@ -1,4 +1,4 @@
-/* $Id: ddns-cleand.c,v 1.7 2000/08/02 20:13:22 drt Exp $
+/* $Id: ddns-cleand.c,v 1.8 2000/10/06 22:01:44 drt Exp $
  *  --drt@ailis.de
  *
  * cleaning daemon for ddns
@@ -10,6 +10,9 @@
  * (K)opyright is myth
  *
  * $Log: ddns-cleand.c,v $
+ * Revision 1.8  2000/10/06 22:01:44  drt
+ * Library reorganisation
+ *
  * Revision 1.7  2000/08/02 20:13:22  drt
  * -V
  *
@@ -62,7 +65,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.7 2000/08/02 20:13:22 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.8 2000/10/06 22:01:44 drt Exp $";
 
 #define ARGV0 "ddns-cleand: "
 
@@ -330,8 +333,8 @@ int main(int argc, char *argv[])
   buffer_flush(buffer_2);
 
   /* SIGALRM can be used to force cleaning now */
-  sig_alarmcatch(sigalrm);
-  
+  sig_catch(sig_alarm, sigalrm);
+
   for (;;)
     {
       /* we reopen data.cdb for every pass over the database */
@@ -365,5 +368,4 @@ int main(int argc, char *argv[])
 	}
     }
 
-  sig_alarmdefault();
 }

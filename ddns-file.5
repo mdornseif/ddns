@@ -1,19 +1,21 @@
 .TH ddns-file 5
 .SH NAME
-ddns-file \- file format used by the ddns system
+ddns-file \- file format used by the ddns system for on-disk storage
 .SH DESCRIPTION
 .IR ddnsd (8)
 uses a file format to store information about its clients
 read by various tools like
 .IR filedns (8).
 .P
-The file format can express IPv4, IPv6, DNS LOC records and comments.
-.SH "THE QMAIL FILE"
+The file format can express IPv4, IPv6, DNS LOC records, 
+server specific data and comments.
+.SH "THE DDNSD FILE FORMAT"
 The filename defines the hostname of the data saved in the file.
 The file contains one or more lines.
 Each line is a data record.
-There are four types of records
-(1) comment; (2) IPv4 address; (3) IPv6 address; (4) DNS LOC information.
+There are five types of records
+(1) comment; (2) IPv4 address; (3) IPv6 address; (4) DNS LOC information;
+(5) server specific information.
 .TP 5
 (1)
 A 
@@ -78,9 +80,23 @@ and
 have to be encoded. Programs must be prepared to read all other values 
 unencoded. But when creating entrys encoding non-ascii values increases
 readibility by humans.
+.TP 5
+(5)
+.B Server specific information begins with
+a lowercase letter. Up to now only 
+.I s
+is used by 
+.IR ddnsd (8).
+
+.EX
+     s1199,127.0.0.1,0:0:0:0:0:0:0:0,50 57 9.700 N 6 54 8.300 E 5700 5000 5000 1000,me.dyn.rc23.cx
+.EE
 .P
 Each entry may contain extra spaces and tabs at the end of a line.
 Blank lines are allowed.
+.P
+.SH "AUTHOR"
+Doobee R. Tzeck <drt@ailis.de> is to blame for this.
 .P
 .SH "SEE ALSO"
 ddnsd(8),
