@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.26 2000/11/17 02:00:41 drt Exp $
+# $Id: Makefile,v 1.27 2000/11/21 21:29:48 drt Exp $
 #  --drt@ailis.de
 
 VERSION=\"preAlpha4\"
@@ -14,9 +14,10 @@ daemon: ddnsd ddnsd-data ddnsd-conf \
         ddns-cleand ddns-cleand-conf \
         filedns filedns-conf \
         ddns-snapd ddns-snapd-conf \
-        ddns-ipfwo.linux ddns-ipfwo-conf
+        ddns-ipfwo ddns-ipfwo-conf \
+	html
 
-client: ddns-clientd
+client: ddns-clientd ddns-clientd.html
 
 html: ddnsd.html ddnsd-conf.html ddnsd-data.html \
       ddns-cleand.html ddns-cleand-conf.html \
@@ -58,8 +59,8 @@ ddns-snapd: djblib.a ddns.h ddns-snapd.o ddns_snapdump.o dAVLTree.o \
 ddns-snapd-conf: djblib.a ddns-snapd-conf.o generic-conf.o auto_home.o
 	$(CC) $(CFLAGS) -o $@ ddns-snapd-conf.o generic-conf.o auto_home.o djblib.a
 
-ddns-ipfwo.linux: djblib.a ddns-ipfwo.linux.o ddns_parseline.o drtlib.a djblib.a drtlib.a 
-	$(CC) $(CFLAGS) -o $@ ddns-ipfwo.linux.o ddns_parseline.o drtlib.a djblib.a drtlib.a 
+ddns-ipfwo: djblib.a ddns-ipfwo.o ddns-ipfwo.linux.o ddns_parseline.o drtlib.a djblib.a drtlib.a 
+	$(CC) $(CFLAGS) -o $@ ddns-ipfwo.o ddns-ipfwo.linux.o ddns_parseline.o drtlib.a djblib.a drtlib.a 
 
 ddns-ipfwo-conf: djblib.a ddns-ipfwo-conf.o generic-conf.o auto_home.o
 	$(CC) $(CFLAGS) -o $@ ddns-ipfwo-conf.o generic-conf.o auto_home.o djblib.a
@@ -109,7 +110,7 @@ setup-server: daemon
 #	install -cD ddns-snapd.8 /usr/local/man/man8/ddnsd-snapd.8
 	install -Ds ddns-snapd-conf /usr/local/bin/ddns-snapd-conf
 #	install -cD ddns-snapd-conf.8 /usr/local/man/man8/ddnsd-snapd-conf.8
-	install -Ds ddns-ipfwo.linux /usr/local/bin/ddns-ipfwo.linux
+	install -Ds ddns-ipfwo /usr/local/bin/ddns-ipfwo
 #	install -cD ddns-ipfwo.8 /usr/local/man/man8/ddnsd-ipfwo.8
 	install -Ds ddns-ipfwo-conf /usr/local/bin/ddns-ipfwo-conf
 #	install -cD ddns-ipfwo-conf.8 /usr/local/man/man8/ddnsd-ipfwo-conf.8
@@ -125,3 +126,4 @@ distclean: clean
 	rm -f *.html 
 
 
+html: ddns-cleand-conf.html ddns-cleand.html ddns-file.html ddns-ipfwo-conf.html ddns-ipfwo.linux.html ddns-pipe.html ddnsd-conf.html ddnsd-data.html ddnsd.html filedns-conf.html filedns.html
