@@ -1,5 +1,5 @@
-/* $Id: ddns-snapd-conf.c,v 1.1 2000/07/31 19:03:17 drt Exp $
- *  --drt@ailis.de
+/* $Id: ddns-snapd-conf.c,v 1.2 2000/11/21 19:37:02 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * create directory structure for using ddnsd-aclwriter with svscan
  *
@@ -8,6 +8,9 @@
  * I do not belive there is a thing like copyright.
  *
  * $Log: ddns-snapd-conf.c,v $
+ * Revision 1.2  2000/11/21 19:37:02  drt
+ * Emailaddress Changed
+ *
  * Revision 1.1  2000/07/31 19:03:17  drt
  * initial revision
  *
@@ -20,7 +23,7 @@
 #include "auto_home.h"
 #include "generic-conf.h"
 
-static char rcsid[] = "$Id: ddns-snapd-conf.c,v 1.1 2000/07/31 19:03:17 drt Exp $";
+static char rcsid[] = "$Id: ddns-snapd-conf.c,v 1.2 2000/11/21 19:37:02 drt Exp $";
 
 #define FATAL "ddns-snap-conf: fatal: "
 

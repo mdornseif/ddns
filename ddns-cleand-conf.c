@@ -1,5 +1,5 @@
-/* $Id: ddns-cleand-conf.c,v 1.2 2000/07/31 19:15:56 drt Exp $
- *  --drt@ailis.de
+/* $Id: ddns-cleand-conf.c,v 1.3 2000/11/21 19:35:48 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * create directory structure for using ddns-cleand with svscan
  * based on dan Bernseins *-conf
@@ -9,6 +9,9 @@
  * I do not belive there is a thing like copyright.
  *
  * $Log: ddns-cleand-conf.c,v $
+ * Revision 1.3  2000/11/21 19:35:48  drt
+ * Emailaddress Changed
+ *
  * Revision 1.2  2000/07/31 19:15:56  drt
  * ddns-file(5) format changed
  * a lot of restructuring
@@ -29,7 +32,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand-conf.c,v 1.2 2000/07/31 19:15:56 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand-conf.c,v 1.3 2000/11/21 19:35:48 drt Exp $";
 
 #define FATAL "ddns-cleand-conf: fatal: "
 

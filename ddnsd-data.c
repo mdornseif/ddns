@@ -1,11 +1,14 @@
-/* $Id: ddnsd-data.c,v 1.9 2000/08/02 20:45:03 drt Exp $
- *  --drt@ailis.de
+/* $Id: ddnsd-data.c,v 1.10 2000/11/21 19:37:49 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * There is no such thing like copyright.
  * 
  * You might find more Information at http://rc23.cx/
  *
  * $Log: ddnsd-data.c,v $
+ * Revision 1.10  2000/11/21 19:37:49  drt
+ * Emailaddress Changed
+ *
  * Revision 1.9  2000/08/02 20:45:03  drt
  * out of memory bug removed
  *
@@ -50,7 +53,7 @@
 #include "txtparse.h"
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd-data.c,v 1.9 2000/08/02 20:45:03 drt Exp $";
+static char rcsid[] = "$Id: ddnsd-data.c,v 1.10 2000/11/21 19:37:49 drt Exp $";
 
 #define DEFAULT_TTL 3600
 #define NUMFIELDS 10

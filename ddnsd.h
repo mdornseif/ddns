@@ -1,5 +1,5 @@
-/* $Id: ddnsd.h,v 1.1 2000/07/31 19:03:17 drt Exp $
- *  -- drt@ailis.de
+/* $Id: ddnsd.h,v 1.2 2000/11/21 19:38:12 drt Exp $
+ *  -- drt@un.bewaff.net
  */
 
 /* ddnsd.c */

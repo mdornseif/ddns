@@ -1,5 +1,5 @@
-/* $Id: ddns-ipfwo-conf.c,v 1.2 2000/10/06 13:54:24 drt Exp $
- *  --drt@ailis.de
+/* $Id: ddns-ipfwo-conf.c,v 1.3 2000/11/21 19:36:09 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * create directory structure for using ddnsd-aclwriter with svscan
  *
@@ -8,6 +8,9 @@
  * I do not belive there is a thing like copyright.
  *
  * $Log: ddns-ipfwo-conf.c,v $
+ * Revision 1.3  2000/11/21 19:36:09  drt
+ * Emailaddress Changed
+ *
  * Revision 1.2  2000/10/06 13:54:24  drt
  * fixed missing newline
  *
@@ -23,7 +26,7 @@
 #include "auto_home.h"
 #include "generic-conf.h"
 
-static char rcsid[] = "$Id: ddns-ipfwo-conf.c,v 1.2 2000/10/06 13:54:24 drt Exp $";
+static char rcsid[] = "$Id: ddns-ipfwo-conf.c,v 1.3 2000/11/21 19:36:09 drt Exp $";
 
 #define FATAL "ddns-ipfwo-conf: fatal: "
 

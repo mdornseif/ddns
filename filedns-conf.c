@@ -1,5 +1,5 @@
-/* $Id: filedns-conf.c,v 1.2 2000/07/31 19:15:56 drt Exp $
- *  --drt@ailis.de
+/* $Id: filedns-conf.c,v 1.3 2000/11/21 19:38:29 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * create directory structure for using filedns with svscan
  *
@@ -10,6 +10,9 @@
  * I do not belive there is a thing like copyright.
  *
  * $Log: filedns-conf.c,v $
+ * Revision 1.3  2000/11/21 19:38:29  drt
+ * Emailaddress Changed
+ *
  * Revision 1.2  2000/07/31 19:15:56  drt
  * ddns-file(5) format changed
  * a lot of restructuring
@@ -30,7 +33,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: filedns-conf.c,v 1.2 2000/07/31 19:15:56 drt Exp $";
+static char rcsid[] = "$Id: filedns-conf.c,v 1.3 2000/11/21 19:38:29 drt Exp $";
 
 #define FATAL "filedns-conf: fatal: "
 
