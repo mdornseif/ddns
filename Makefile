@@ -45,8 +45,10 @@ libs: dnscache.a libtai.a
 dnscache.a:
 	if [ ! -d dnscache ]; then \
 		$(DOWNLOADER) http://cr.yp.to/dnscache/dnscache-1.00.tar.gz; \
+		$(DOWNLOADER) http://www.fefe.de/dns/dnscache-1.00-ipv6.diff5; \
 		tar xzvf dnscache-1.00.tar.gz; rm dnscache-1.00.tar.gz; \
 		mv dnscache-1.00 dnscache; \
+		cd dnscache; patch < ../dnscache-1.00-ipv6.diff5 ; cd ..; \
         fi;	
 	cd dnscache; \
 	make; \
