@@ -1,8 +1,11 @@
-/* $Id: ddnsd.c,v 1.5 2000/04/25 08:34:15 drt Exp $
+/* $Id: ddnsd.c,v 1.6 2000/04/27 09:41:20 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.6  2000/04/27 09:41:20  drt
+ * Tiny Bugfix
+ *
  * Revision 1.5  2000/04/25 08:34:15  drt
  * Handling of tmp files fixed.
  *
@@ -260,7 +263,7 @@ void ddnsd_setentry( struct ddnsrequest *p)
       stralloc_cats(&tmpname, "."); 
       stralloc_cats(&tmpname, host); 
       stralloc_cats(&tmpname, "-"); 
-      stralloc_cat(&tmpname, username); 
+      stralloc_cat(&tmpname, &username); 
       stralloc_0(&tmpname);
       
       if (stat(tmpname.s,&st) == -1) if (errno == error_noent) break;
