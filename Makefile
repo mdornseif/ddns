@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.22 2000/07/31 19:08:15 drt Exp $
+# $Id: Makefile,v 1.23 2000/07/31 19:43:02 drt Exp $
 #  --drt@ailis.de
 
 DOWNLOADER = "wget"
@@ -13,6 +13,8 @@ all: client daemon
 daemon: libs ddnsd ddnsd-data ddnsd-conf ddns-cleand ddns-cleand-conf filedns filedns-conf ddns-snapd ddns-snapd-conf ddns-ipfwo.linux ddns-ipfwo-conf
 
 client: libs ddns-clientd
+
+html: ddns-cleand-conf.html ddns-cleand.html ddns-clientd.html ddns-file.html ddnsd-conf.html ddnsd-data.html ddnsd.html filedns-conf.html filedns.html
 
 ddns-clientd: ddns.h ddns-clientd.o ddnsc.o ddns_pack.o dnscache.a libtai.a \
 drtlib.a djblib.a dnscache/ndelay_off.o
@@ -78,9 +80,11 @@ hasmkffo.h: dnscache.a
 
 trymkffo: trymkffo.o
 
-# this is broken
-.8.@html@:
-	groff -Thtml $< $@ 
+%.html: %.8
+	groff -Thtml $< > $@ 
+
+%.html: %.5
+	groff -Thtml $< > $@ 
 
 libs: dnscache.a libtai.a drtlib.a djblib.a
 
