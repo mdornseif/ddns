@@ -1,8 +1,11 @@
-/* $Id: ddnsc.c,v 1.2 2000/04/21 06:58:36 drt Exp $
+/* $Id: ddnsc.c,v 1.3 2000/04/24 16:30:56 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.3  2000/04/24 16:30:56  drt
+ * First basically working version implementing full protocol
+ *
  * Revision 1.2  2000/04/21 06:58:36  drt
  * *** empty log message ***
  *
@@ -29,9 +32,9 @@
 
 char *key = "geheimgeheimgehe";
 
-void die_generate(void)
+void die_usage(void)
 {
-  strerr_die2sys(111,FATAL,"unable to generate AXFR query: ");
+  strerr_die1x(111, "usage: ddnsc uid ip (s|r|k)");
 }
 void die_parse(void)
 {
@@ -135,10 +138,10 @@ int ddnsc_recive(struct ddnsreply *p)
   taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
   tai_unpack((char*) &ptmp.leasetime, &p->leasetime);
 
-  dump_packet(p, "unpacked");
 
   if(p->magic != DDNS_MAGIC)
     {
+      dump_packet(p, "achtung baby");
       strerr_die1x(100,"wrong magic");
     }
   
@@ -175,7 +178,7 @@ static void ddnsc_send(struct ddnsrequest *p)
   buffer_flush(&netwrite); 
 }
 
-main()
+main(int argc, char **argv)
 {
   struct ddnsrequest p = { 0 };
   struct ddnsreply r = { 0 };
@@ -184,12 +187,15 @@ main()
   unsigned char clean_query[256] = {0};
   unsigned char *qptr = NULL;
   unsigned char *qptr2 = NULL;
+  unsigned char ip[4] = { 0 };
+  uint32 uid;
   int len, query_len;
   int fd = 0;
+  int a;
   stralloc answer = {0};
-  
-  /* chroot() to $ROOT and switch to $UID:$GID */
-  //  droproot("dffingerd: ");
+  char strnum[FMT_ULONG];
+  struct tai t;
+  uint32 u;
 
   /* seed some entropy into the MT */
   seedMT((long long) getpid () *
@@ -198,81 +204,73 @@ main()
 	 (long long) random() * 
 	 (long long) clock());
 
-  p.uid = 16;
-  p.type = DDNS_T_SETENTRY;
-  p.ip = (127 << 24) | 1;
+
+  if(argc != 4)
+    {
+      die_usage();
+    }
+
+  a = scan_ulong(argv[1], &uid);
+  a = ip4_scan(argv[2], ip);
+  
+  if(*argv[3] == 's')
+    {
+      p.type = DDNS_T_SETENTRY;
+    }
+  else if(*argv[3] == 'r')
+    {
+      p.type = DDNS_T_RENEWENTRY;
+    }
+  else if(*argv[3] == 'k')
+    {
+      p.type = DDNS_T_KILLENTRY;
+    }
+  else 
+    {
+      die_usage();
+    }
+  
+  p.uid = uid;
+  byte_copy(&p.ip, 4, ip);
+
   ddnsc_send(&p);
   ddnsc_recive(&r);
 
   switch(r.type)
     {
-    case DDNS_T_ACK: dump_packet(&r, "ACK"); break;
-    case DDNS_T_NAK: dump_packet(&r, "NAK"); break;
-    case DDNS_T_ESERVINT: dump_packet(&r, "ESINT"); break;
-    case DDNS_T_EPROTERROR: dump_packet(&r, "ESINT"); break;   
-    case DDNS_T_EWRONGMAGIC: dump_packet(&r, "EWMAG"); break;  
-    case DDNS_T_ECANTDECRYPT: dump_packet(&r, "ECDEC"); break; 
-    case DDNS_T_EALLREADYUSED: dump_packet(&r, "EUSED"); break;
-    case DDNS_T_EUNKNOWNUID: dump_packet(&r, "EUNID"); break;  
-    case DDNS_T_EUNSUPPTYPE: dump_packet(&r, "EUNSR"); break;  
-    default: dump_packet(&r, "unknown packet");
+    case DDNS_T_ACK: 
+      buffer_puts(buffer_1, "ACK: ");
+      buffer_put(buffer_1, strnum, fmt_ulong(strnum, r.leasetime.x));
+      buffer_puts(buffer_1, "\n");
+      break;
+    case DDNS_T_NAK: 
+      buffer_puts(buffer_1, "NAK: mail drt@ailis.de\n"); 
+      break;
+    case DDNS_T_ESERVINT: 
+      buffer_puts(buffer_1, "EIN: internal server error\n"); 
+      break;
+    case DDNS_T_EPROTERROR: 
+      buffer_puts(buffer_1, "EPR: mail drt@ailis.de\n"); 
+      break;   
+    case DDNS_T_EWRONGMAGIC: 
+      buffer_puts(buffer_1, "EWM: server thinks we send him a message with bad magic\n");
+      break;  
+    case DDNS_T_ECANTDECRYPT: 
+      buffer_puts(buffer_1, "EDC: server can not decrypt our message\n"); 
+      break; 
+    case DDNS_T_EALLREADYUSED: 
+      buffer_puts(buffer_1, "EUD: uid has already registered an ip\n"); 
+      break;
+    case DDNS_T_EUNKNOWNUID: 
+      buffer_puts(buffer_1, "EID: uid is unknown to the server\n"); 
+      break;  
+    case DDNS_T_EUNSUPPTYPE: 
+      buffer_puts(buffer_1, "EUS: \n"); 
+      break;  
+    default:
+      dump_packet(&r, "unknown packet");
     }
-
-  sleep(1);
-  sleep(2);
-
-  p.type = DDNS_T_RENEWENTRY;
-  ddnsc_send(&p);
-  ddnsc_recive(&r);
-  switch(r.type)
-    {
-    case DDNS_T_ACK: dump_packet(&r, "ACK"); break;
-    case DDNS_T_NAK: dump_packet(&r, "NAK"); break;
-    case DDNS_T_ESERVINT: dump_packet(&r, "ESINT"); break;
-    case DDNS_T_EPROTERROR: dump_packet(&r, "ESINT"); break;   
-    case DDNS_T_EWRONGMAGIC: dump_packet(&r, "EWMAG"); break;  
-    case DDNS_T_ECANTDECRYPT: dump_packet(&r, "ECDEC"); break; 
-    case DDNS_T_EALLREADYUSED: dump_packet(&r, "EUSED"); break;
-    case DDNS_T_EUNKNOWNUID: dump_packet(&r, "EUNID"); break;  
-    case DDNS_T_EUNSUPPTYPE: dump_packet(&r, "EUNSR"); break;  
-    default: dump_packet(&r, "unknown packet");
-    }
-
-  exit(1);
-
-  p.type = DDNS_T_KILLENTRY;
-  ddnsc_send(&p);
-  ddnsc_recive(&r);
-  switch(r.type)
-    {
-    case DDNS_T_ACK: dump_packet(&r, "ACK"); break;
-    case DDNS_T_NAK: dump_packet(&r, "NAK"); break;
-    case DDNS_T_ESERVINT: dump_packet(&r, "ESINT"); break;
-    case DDNS_T_EPROTERROR: dump_packet(&r, "ESINT"); break;   
-    case DDNS_T_EWRONGMAGIC: dump_packet(&r, "EWMAG"); break;  
-    case DDNS_T_ECANTDECRYPT: dump_packet(&r, "ECDEC"); break; 
-    case DDNS_T_EALLREADYUSED: dump_packet(&r, "EUSED"); break;
-    case DDNS_T_EUNKNOWNUID: dump_packet(&r, "EUNID"); break;  
-    case DDNS_T_EUNSUPPTYPE: dump_packet(&r, "EUNSR"); break;  
-    default: dump_packet(&r, "unknown packet");
-    }
-
-  p.type = DDNS_T_RENEWENTRY;
-  ddnsc_send(&p);
-  ddnsc_recive(&r);
-  switch(r.type)
-    {
-    case DDNS_T_ACK: dump_packet(&r, "ACK"); break;
-    case DDNS_T_NAK: dump_packet(&r, "NAK"); break;
-    case DDNS_T_ESERVINT: dump_packet(&r, "ESINT"); break;
-    case DDNS_T_EPROTERROR: dump_packet(&r, "ESINT"); break;   
-    case DDNS_T_EWRONGMAGIC: dump_packet(&r, "EWMAG"); break;  
-    case DDNS_T_ECANTDECRYPT: dump_packet(&r, "ECDEC"); break; 
-    case DDNS_T_EALLREADYUSED: dump_packet(&r, "EUSED"); break;
-    case DDNS_T_EUNKNOWNUID: dump_packet(&r, "EUNID"); break;  
-    case DDNS_T_EUNSUPPTYPE: dump_packet(&r, "EUNSR"); break;  
-    default: dump_packet(&r, "unknown packet");
-    }
+  buffer_flush(buffer_1);  
   
   exit(0);
 }
