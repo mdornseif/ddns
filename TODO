@@ -1,19 +1,16 @@
 * clean up sourcecode
 * ipv6 support
-* set paranoid umasks
 * checking connection between source ip and requesting ip
-* clean up log messages
-* build queue cleaner: ddnsq
+* clean up log/error messages
 * renumber DDNS_T_*
 * document protocol
 * write manpages
 * entropy gatherer/password creator
-* clean up error codes
 * fix tai encapsulation
-* dynamic leasetime
 * driver for ddnsc
 * ddnsc: reading passwd from enviroment
-* ddnsd: chrooting
-* change magic to detect endianess issues
-* update protocoll for udp
-* handle timeouts/short reads/writes smarter
+* update protocol for udp
+* rename programms
+* create an action daemon
+* ddnsd, ddnsc: real handling of loc/ipv6
+* split ddnsd in several files
