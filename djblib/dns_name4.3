@@ -1,0 +1,41 @@
+.TH dns_name4 3
+.SH NAME
+dns_name4 \- find FQDNs for IP addresses
+.SH SYNTAX
+.B #include <dns.h>
+
+void \fBdns_name4\fP(&\fIout\fR,\fIip\fR);
+.br
+void \fBdns_name_packet\fP(&\fIout\fR,char *\fIbuf\fR,unsigned int \fIlen\fR);
+.br
+void \fBdns_name4_domain\fP(\fIq\fR,\fIip\fR);
+
+stralloc \fIout\fR = {0};
+.br
+char \fIip\fR[4];
+.br
+char \fIq\fR[DNS_NAME4_DOMAIN];
+
+.SH DESCRIPTION
+.B dns_name4
+looks up the domain name for the 4-byte IP address in \fIip\fR.  It puts the
+(first) domain name into \fIout\fR and returns 0. If the relevant in-addr.arpa
+domain does not exist in DNS, or has no PTR records, \fIout\fR will be empty.
+
+If \fBdns_name4\fR has trouble with the DNS lookup or runs out of
+memory, it returns -1, setting \fIerrno\fR appropriately. It may or may
+not change \fIout\fR.
+
+.B dns_name_packet
+is a low-level component of \fBdns_name4\fR, designed to support
+asynchronous DNS lookups. It reads a DNS packet of length \fIlen\fR from \fIbuf\fR,
+extracts the first PTR record from the answer section of the packet, puts the
+result into \fIout\fR, and returns 0 or -1 the same way as \fIdns_name4\fR.
+
+.B dns_name4_domain
+is another low-level component of \fBdns_name4\fR. It converts an IP address
+such as 1.2.3.4 into a domain name such as 4.3.2.1.in-addr.arpa and
+places the packet-encoded domain name into \fIq\fR.
+
+.SH "SEE ALSO"
+dns_ip4_qualify(3), dns_name6(3)

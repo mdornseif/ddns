@@ -1,0 +1,33 @@
+.TH dns_mx 3
+.SH NAME
+dns_mx \- look up MX records for a FQDN
+.SH SYNTAX
+.B #include <dns.h>
+
+void \fBdns_mx\fP(&\fIout\fR,&\fIfqdn\fR);
+.br
+void \fBdns_mx_packet\fP(&\fIout\fR,char *\fIbuf\fR,unsigned int \fIlen\fR);
+
+stralloc \fIout\fR = {0};
+.br
+stralloc \fIfqdn\fR = {0};
+
+.SH DESCRIPTION
+.B dns_mx
+looks up MX records for the fully-qualified domain name in \fIfqdn\fR. It puts
+the MX records into \fIout\fR and returns 0.  Each MX record is a two-byte MX
+distance followed by a \0-terminated dot-encoded domain name. If the
+domain does not exist in DNS, or has no MX records, \fIout\fR will be empty.
+
+If \fBdns_mx\fR has trouble with the DNS lookup or runs out of
+memory, it returns -1, setting \fIerrno\fR appropriately. It may or may
+not change \fIout\fR.
+
+.B dns_mx_packet
+is a low-level component of \fBdns_mx\fR, designed to support
+asynchronous DNS lookups. It reads a DNS packet of length \fIlen\fR from \fIbuf\fR,
+extracts the MX records from the answer section of the packet, puts the
+results into \fIout\fR, and returns 0 or -1 the same way as \fIdns_mx\fR.
+
+.SH "SEE ALSO"
+dns_ip4_qualify(3), dns_ip6_qualify(3), dns_name4(3)

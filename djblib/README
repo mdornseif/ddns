@@ -1,0 +1,4 @@
+This is derivered from fefes djblib which descends from
+various tools by Dan Bernstein. It is patched by me so
+don't bother Fefe or Dan with this stuff.
+   -drt@ailis.de

@@ -1,0 +1,35 @@
+.TH ip6_scan 3
+.SH NAME
+ip6_scan \- parse an IPv6 number in ASCII representation
+.SH SYNTAX
+.B #include <ip6.h>
+
+int \fBip6_scan\fP(const char *\fIsrc\fR,char \fIip\fR[16]);
+.SH DESCRIPTION
+ip6_scan parses an IPv6 number in RFC1884 ASCII representation
+from \fIsrc\fR and writes the result into \fIip\fR. It returns the
+number of bytes read from \fIsrc\fR or 0 if the parsing failed.
+
+ip6_scan accepts upper and lower case hex letters, it understands "::"
+compression and partial IPv4 addresses as in "::FFFF:129.144.52.38".
+
+To allow transparent usage of IPv4 in IPv6 applications, ip6_scan also
+understands IPv4 addresses in dotted-decimal notation and will return
+an IPv4-mapped IPv6 address (i.e. "127.0.0.1" will be parsed as
+"::FFFF:127.0.0.1".
+
+Unlike many other IP parsing routines, ip6_scan does not recognize octal
+(like \fB0177.0.0.1\fR) or hexadecimal numbers (like \fB0x7f000001\fR)
+in the IPv4 part.
+.SH EXAMPLE
+#include <str.h>
+.br
+#include <ip6.h>
+
+  char buf[]="::1";
+  char ip[16];
+  if (ip6_scan(buf,ip) != str_len(buf))
+    parse_error();
+
+.SH "SEE ALSO"
+ip6_fmt(3), ip4_scan(3)

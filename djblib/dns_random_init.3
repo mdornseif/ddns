@@ -1,0 +1,16 @@
+.TH dns_random_init 3
+.SH NAME
+dns_random_init \- initialize DNS random number generator
+.SH SYNTAX
+.B #include <dns.h>
+
+void \fBdns_random_init\fP(\fIseed\fR);
+
+char \fIseed\fR[128];
+.SH DESCRIPTION
+.B dns_random_init
+initializes the pseudorandom number generator, taking account of
+\fIseed\fR, the current process ID, and current time.
+
+.SH "SEE ALSO"
+dns_random(3)

@@ -1,0 +1,32 @@
+.TH dns_random 3
+.SH NAME
+dns_random \- return a pseudorandom number
+.SH SYNTAX
+.B #include <dns.h>
+
+unsigned int \fBdns_random\fP(unsigned int \fIm\fR);
+
+.SH DESCRIPTION
+.B dns_random
+computes a pseudorandom 32-bit integer and returns that integer modulo
+\fIm\fR. It returns 0 if \fIm\fR is 0.
+
+.SH "NOTES ON DNS QUERY SECURITY"
+
+A DNS client will accept any response that shows up at the right time,
+is addressed from the IP address of the legitimate server, is addressed
+to the UDP port used in the DNS query, repeats the query name and type
+used in the DNS query, and repeats the 16-bit ID used in the DNS query.
+
+An active sniffing attacker can easily forge responses by copying
+information from queries. Blind attackers need to guess the time, UDP
+port, and ID for the targeted query name.
+
+The dns_transmit functions use \fBdns_random\fR to create query IDs and UDP
+ports. The \fBdns_random\fR generator is designed to be extremely difficult to
+predict for an attacker who cannot guess seed. Note, however, that there
+are only about a billion possible ID-port pairs, so a prolonged blind
+attack will succeed eventually.
+
+.SH "SEE ALSO"
+dns_random_init(3)

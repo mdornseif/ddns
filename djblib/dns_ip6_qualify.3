@@ -1,0 +1,34 @@
+.TH dns_ip6_qualify 3
+.SH NAME
+dns_ip6_qualify \- find IP addresses for host names
+.SH SYNTAX
+.B #include <dns.h>
+
+void \fBdns_ip6_qualify\fP(&\fIout\fR,&\fIfqdn\fR,&\fIudn\fR);
+
+stralloc \fIout\fR = {0};
+.br
+stralloc \fIfqdn\fR = {0};
+.br
+stralloc \fIudn\fR;
+
+.SH DESCRIPTION
+.B dns_ip6_qualify
+feeds the name \fIudn\fR through qualification and looks up 16-byte IPv6
+addresses for the result. It puts the fully qualified domain name into
+\fIfqdn\fR, puts the concatenation of the IP addresses into \fIout\fR,
+and returns 0. If the domain does not exist in DNS, or has no IP
+addresses, \fIout\fR will be empty.
+
+Like \fBdns_ip6\fR, dns_ip6_qualify will also look up IPv4 addresses and
+append them in IPv4-mapped IPv6 representation.
+
+If \fBdns_ip6_qualify\fR has trouble with the qualification, has trouble
+with DNS, or runs out of memory, it returns -1, setting \fIerrno\fR
+appropriately.  It may or may not change \fIout\fR and \fIfqdn\fR.
+
+.SH QUALIFICATION
+Please read http://cr.yp.to/dnscache/qualify.html.
+
+.SH "SEE ALSO"
+dns_ip4_qualify(3), dns_ip6(3)

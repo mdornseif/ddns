@@ -1,0 +1,47 @@
+.TH dns_ip6 3
+.SH NAME
+dns_ip6 \- find IPv6 addresses for FQDNs
+.SH SYNTAX
+.B #include <dns.h>
+
+void \fBdns_ip6\fP(&\fIout\fR,&\fIfqdn\fR);
+.br
+void \fBdns_ip6_4mapped\fP(&\fIout\fR,&\fIfqdn\fR);
+.br
+void \fBdns_ip6_packet\fP(&\fIout\fR,char *\fIbuf\fR,unsigned int \fIlen\fR);
+
+stralloc \fIout\fR = {0};
+.br
+stralloc \fIfqdn\fR = {0};
+
+.SH DESCRIPTION
+.B dns_ip6
+looks up 16-byte IPv6 addresses for the fully-qualified domain name in
+\fIfqdn\fR. It puts the concatenation of the IP addresses into \fIout\fR and returns
+0. If the domain does not exist in DNS, or has no IP addresses, \fIout\fR will
+be empty.
+
+If \fBdns_ip6\fR has trouble with the DNS lookup or runs out of memory, it
+returns -1, setting \fIerrno\fR appropriately. It may or may not change \fIout\fR.
+
+If \fIfqdn\fR is a dotted-decimal IP address, \fBdns_ip6\fR converts
+that IP address into IPv4-mapped IPv6 representation and puts it
+into \fIout\fR without checking DNS.  Likewise, if \fIfqdn\fR is an IPv6
+address, \fBdns_ip6\fR puts that address into \fIout\fR without checking
+DNS.
+
+\fBdns_ip6\fR performs IPv6 and IPv4 lookups on \fIfqdn\fR, appending
+the IPv4 addresses in IPv4-mapped IPv6 representation.
+
+.B dns_ip6_4mapped
+uses \fBdns_ip4\fR and returns the addresses in IPv4-mapped IPv6
+representation.
+
+.B dns_ip6_packet
+is a low-level component of \fBdns_ip6\fR, designed to support
+asynchronous DNS lookups. It reads a DNS packet of length \fIlen\fR from \fIbuf\fR,
+extracts IP addresses from the answer section of the packet, puts the
+addresses into \fIout\fR, and returns 0 or -1 the same way as \fIdns_ip6\fR.
+
+.SH "SEE ALSO"
+dns_ip6_qualify(3), dns_ip4(3), dns_name6(3)
