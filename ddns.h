@@ -1,6 +1,9 @@
-/* $Id: ddns.h,v 1.11 2000/08/02 20:13:22 drt Exp $
+/* $Id: ddns.h,v 1.12 2000/10/06 13:52:48 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.12  2000/10/06 13:52:48  drt
+ * fixing VERSIONINFO coredumps
+ *
  * Revision 1.11  2000/08/02 20:13:22  drt
  * -V
  *
@@ -115,7 +118,7 @@ struct ddnsreply {
 
 
 
-#define VERSIONINFO if(argc > 0 && argv[1][0] == '-' && argv[1][1] == 'V') \
+#define VERSIONINFO if(argc > 1 && argv[1][0] == '-' && argv[1][1] == 'V') \
    { \
      buffer_puts(buffer_2, ARGV0 "Version "); \
      buffer_puts(buffer_2, VERSION); \
@@ -134,7 +137,7 @@ extern int write_fifodir(char *dirname, stralloc *sa, void (*openandwrite)(char 
 
 
 /* definition foe standard C functions */
-/* I dont want to include headers which include 
+/* I don't want to include headers which include 
    headers which include headers which include stuff 
    I don't understans */
 extern int close(int);
