@@ -1,11 +1,14 @@
-/* $Id: ddns-clientd.c,v 1.3 2000/07/12 12:33:50 drt Exp $
+/* $Id: ddns-clientd.c,v 1.4 2000/07/13 14:16:27 drt Exp $
  *  -- drt@ailis.de
  * 
- * metaclient for ddns - driver for ddnsdc
+ * client for ddns
  *
  * (K)opyright is Myth
  * 
  * $Log: ddns-clientd.c,v $
+ * Revision 1.4  2000/07/13 14:16:27  drt
+ * more logging in ddns-clientd and catching SIGINT
+ *
  * Revision 1.3  2000/07/12 12:33:50  drt
  * fixed the buildprocess
  *
@@ -20,10 +23,9 @@
  *
  */
 
-#include <unistd.h>    /* fork() */
-#include <sys/wait.h>  /* wait() */
 #include <errno.h>     /* EINTR */
 #include <stdlib.h>    /* random, clock */
+#include <sys/wait.h>  /* wait() */
 #include <time.h>      /* time */
 #include <unistd.h>    /* close, getpid, getppid */
 
@@ -45,16 +47,17 @@
 #include "pad.h"
 #include "txtparse.h"
 #include "mt19937.h"
-
-#include "ddns.h"
 #include "loc.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.3 2000/07/12 12:33:50 drt Exp $";
+#include "ddns.h"
 
-#define FATAL "ddns-clientd.c: fatal: "
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.4 2000/07/13 14:16:27 drt Exp $";
+
+#define FATAL "ddns-clientd: fatal: "
 
 extern int ddnsc(int type, uint32 uid, char *ip4, char *ip6, struct loc_s *loc, char *key, uint32 *ttl);
 
+/* some globals to keep us from passing to manny parameters arround */
 char ip4[IP4_FMT];
 char ip6[IP6_FMT];
 struct loc_s loc;
@@ -72,15 +75,9 @@ void die_nomem(void)
   strerr_die1sys(110, "ddnsd: fatal: help - no memory ");
 }
 
-void sigterm() 
-{
-  flagexit = 1;
-}
+void sigterm() { flagexit = 1; }
 
-void sigalrm() 
-{
-  flagalarmed++; 
-}
+void sigalrm() { flagalarmed++; }
 
 /* log an informational message to stderr */
 void log(char *s)
@@ -197,7 +194,7 @@ static int terminate()
 {
   int r;
 
-  log("SIGTERM recived, deregistering");
+  log("Signal recived, deregistering");
   r = kill_entry(ip4, ip6, loc);
 
   if(r != DDNS_T_ACK)
@@ -217,6 +214,7 @@ void doit(void)
   int r;
 
   /* register at server */
+  log("registering at server");
   r = set_entry();
   
   if(r == DDNS_T_EALLREADYUSED)
@@ -234,8 +232,9 @@ void doit(void)
       strerr_die2x(100, FATAL, "could't register at server");
     }
 
-  // catch SIGTERM
+  // catch SIGTERM & SIGINT
   sig_termcatch(sigterm);
+  sig_intcatch(sigterm);
   // ignore SIGALRM
   sig_alarmcatch(sigalrm);
 
@@ -251,6 +250,7 @@ void doit(void)
 	}
       
       // renew registration
+      log("renewing entry");
       r = renew_entry();
       if(r != DDNS_T_ACK)
 	{
@@ -271,7 +271,9 @@ int main(int argc, char *argv[])
   stralloc fqdn = {0};
   stralloc svasa = {0};
   stralloc locsa = {0};
-  
+
+  log("starting");
+
   /* seed some entropy into the MT */
   seedMT((long long) getpid () *
 	 (long long) time(0) *
