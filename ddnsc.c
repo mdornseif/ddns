@@ -1,8 +1,11 @@
-/* $Id: ddnsc.c,v 1.5 2000/04/30 14:56:57 drt Exp $
+/* $Id: ddnsc.c,v 1.6 2000/04/30 15:59:26 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.6  2000/04/30 15:59:26  drt
+ * cleand up usage of djb stuff
+ *
  * Revision 1.5  2000/04/30 14:56:57  drt
  * cleand up usage of djb stuff
  *
@@ -30,12 +33,12 @@
 #include "strerr.h"
 #include "timeoutwrite.h"
 
-#include "lib/mt19937.h"
-#include "lib/rijndael.h"
+#include "mt19937.h"
+#include "rijndael.h"
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsc.c,v 1.5 2000/04/30 14:56:57 drt Exp $";
+static char rcsid[] = "$Id: ddnsc.c,v 1.6 2000/04/30 15:59:26 drt Exp $";
 
 #define FATAL "ddnsc: "
 

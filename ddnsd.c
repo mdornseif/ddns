@@ -1,8 +1,11 @@
-/* $Id: ddnsd.c,v 1.8 2000/04/30 14:56:57 drt Exp $
+/* $Id: ddnsd.c,v 1.9 2000/04/30 15:59:26 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.9  2000/04/30 15:59:26  drt
+ * cleand up usage of djb stuff
+ *
  * Revision 1.8  2000/04/30 14:56:57  drt
  * cleand up usage of djb stuff
  *
@@ -47,8 +50,8 @@
 #include "error.h"
 #include "strerr.h"
 
-#include "lib/mt19937.h"
-#include "lib/rijndael.h"
+#include "mt19937.h"
+#include "rijndael.h"
 
 #include "ddns.h"
 

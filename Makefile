@@ -2,28 +2,25 @@ DOWNLOADER = "wget"
 
 CFLAGS=-g -Idnscache -Ilibtai
 
-defaut: client server
+defaut: client daemon
 
-server: ddnsd ddnsd-data filedns
+daemon: libs ddnsd ddnsd-data filedns
 
-client: ddnsc
+client: libs ddnsc
 
-ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o tools.a dnscache.a libtai.a
+ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o rijndael.o mt19937.o dnscache.a libtai.a 
 	gcc -o $@ $^
 
-ddnsc: ddnsc.o fmt_xint.o fmt_xlong.o tools.a dnscache.a libtai.a
+ddnsc: ddnsc.o fmt_xint.o fmt_xlong.o rijndael.o mt19937.o dnscache.a libtai.a 
 	gcc -o $@ $^
 
-ddnsd-data: ddnsd-data.o buffer_0.o tools.a dnscache.a libtai.a
+ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o dnscache.a libtai.a
 	gcc -o $@ $^
 
-filedns: filedns.o dnscache/server.o libtai.a dnscache.a 
+filedns: filedns.o server.o dnscache.a libtai.a
 	gcc -o $@ $^
 
-tools.a:
-	cd lib; \
-	make; \
-	ar cr ../tools.a *.o; 
+libs: dnscache.a libtai.a
 
 dnscache.a:
 	if [ ! -d dnscache ]; then \
@@ -33,7 +30,7 @@ dnscache.a:
         fi;	
 	cd dnscache; \
 	make; \
-	grep -l ^main *.c | perl -npe 's/^(.*).c/\1.o/;' | xargs rm -f; \
+	grep -l ^main *.c | perl -npe 's/^(.*).c/\1.o/;' | xargs rm -fv; \
 	ar cr ../dnscache.a *.o;
 
 libtai.a:
@@ -44,17 +41,12 @@ libtai.a:
 	fi	
 	cd libtai; \
 	make; \
-	grep -l ^main *.c | perl -npe 's/^(.*).c/\1.o/;' | xargs rm -f; \
+	grep -l ^main *.c | perl -npe 's/^(.*).c/\1.o/;' | xargs rm -fv; \
 	ar cr ../libtai.a *.o; 	
 
 clean:
 	rm -f *.o *.a ddnsd ddnsd-data ddnsc filedns
 
-realclean: clean
-	cd dnscache; rm -f `cat TARGETS`
-	cd libtai; rm -f `cat TARGETS`
-	cd lib ; make clean
-
-distclean: realclean
+distclean: clean
 	rm -f *~ *.cdb
-	cd lib ; make distclean
+	rm -Rf dnscache libtai
