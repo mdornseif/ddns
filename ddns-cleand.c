@@ -1,5 +1,5 @@
-/* $Id: ddns-cleand.c,v 1.10 2000/11/17 02:00:41 drt Exp $
- *  --drt@ailis.de
+/* $Id: ddns-cleand.c,v 1.11 2000/11/21 19:39:55 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * cleaning daemon for ddns
  * 
@@ -10,6 +10,9 @@
  * (K)opyright is myth
  *
  * $Log: ddns-cleand.c,v $
+ * Revision 1.11  2000/11/21 19:39:55  drt
+ * Now *should* use the ddns-pipe mechanism.
+ *
  * Revision 1.10  2000/11/17 02:00:41  drt
  * one shot mode for ddns-clientd
  *
@@ -72,7 +75,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.10 2000/11/17 02:00:41 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.11 2000/11/21 19:39:55 drt Exp $";
 
 #define ARGV0 "ddns-cleand: "
 
@@ -127,15 +130,31 @@ void tmpdir_clean()
    if (stat(tmpname.s,&st) == 0)
      if (time > st.st_atime + 129600)
        {
-		 unlink(tmpname.s);
-		 buffer_puts(buffer_2, "cleaned stale tmpfile ");
-		 buffer_puts(buffer_2, tmpname.s);
-		 buffer_puts(buffer_2, "\n");
-		 buffer_flush(buffer_2);
+	 unlink(tmpname.s);
+	 buffer_puts(buffer_2, "cleaned stale tmpfile ");
+	 buffer_puts(buffer_2, tmpname.s);
+	 buffer_puts(buffer_2, "\n");
+	 buffer_flush(buffer_2);
        }
   }
  closedir(dir);
 }
+
+
+/* write Information about our processing to every fifo in tracedir/ 
+ * 
+ * format used:
+ *
+ * EXPIREENTRY: (used by ddns-cleand)
+ *   e,UID\n
+ *   e,123\n
+ */
+
+void cleand_fifowrite(stralloc *sa)
+{
+  write_fifodir("/tracedir", sa, openandwrite);
+}
+
 
 int dofile(char *file, time_t ctime)
 {
@@ -232,7 +251,7 @@ int dofile(char *file, time_t ctime)
 		}
 	    }
 	  
-	  /* files which are expired delete empty files */
+	  /* delete files which are expired and empty files */
 	  if((now() - ctime > ttl) || (match == 0 && linenum == 1))
 	    {
 	      if(unlink(file) != 0)
@@ -242,9 +261,9 @@ int dofile(char *file, time_t ctime)
 	      else
 		{
 		  /* inform others via ddns-pipe */ 
-		  line.s[0] = 'k';
+		  line.s[0] = 'e';
 		  stralloc_append(&line, "\n");
-		  // FIXME XXX  ddnsd_fifowrite(&line); 
+		  cleand_fifowrite(&line);
 		  
 		  /* do loging */
 		  strnum[fmt_ulong(strnum, uid)] = 0;
@@ -309,7 +328,12 @@ int dodir(char *dirname)
 	    }
 	  else if(S_ISREG(st.st_mode))
 	    {
-	      dofile(name.s, st.st_ctime);
+	      /* this is a file!
+		 if it's got the sticky bit ignore it, else check it out */
+	      if(S_ISVTX & st.st_mode == 0)
+		{
+		  dofile(name.s, st.st_ctime);
+		}
 	    }
 	  else
 	    {
@@ -351,7 +375,7 @@ int main(int argc, char *argv[])
   for (;;)
     {
       /* we reopen data.cdb for every pass over the database */
-	  
+      
       fd = open_read("data.cdb");
       if (fd == -1) 
 	strerr_die1sys(111, "can't open data.cdb ");
