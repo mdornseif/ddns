@@ -1,4 +1,4 @@
-/* $Id: ddns-cleand.c,v 1.6 2000/07/31 19:15:56 drt Exp $
+/* $Id: ddns-cleand.c,v 1.7 2000/08/02 20:13:22 drt Exp $
  *  --drt@ailis.de
  *
  * cleaning daemon for ddns
@@ -10,6 +10,9 @@
  * (K)opyright is myth
  *
  * $Log: ddns-cleand.c,v $
+ * Revision 1.7  2000/08/02 20:13:22  drt
+ * -V
+ *
  * Revision 1.6  2000/07/31 19:15:56  drt
  * ddns-file(5) format changed
  * a lot of restructuring
@@ -55,15 +58,13 @@
 #include "strerr.h"
 
 #include "droprootordie.h"
-#include "fieldsep.h"
 #include "traversedirhier.h"
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.6 2000/07/31 19:15:56 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.7 2000/08/02 20:13:22 drt Exp $";
 
-/* maximum number of fields in a line */
-#define NUMFIELDS 10
+#define ARGV0 "ddns-cleand: "
 
 static uint32 linenum = 0;
 static int interval = 256;
@@ -316,6 +317,8 @@ int main(int argc, char *argv[])
 {
   int fd;
   char *x;
+
+  VERSIONINFO;
 
   /* chroot() to $ROOT and switch to $UID:$GID */
   droprootordie("ddns-cleand: ");

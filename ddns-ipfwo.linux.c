@@ -1,9 +1,12 @@
-/* $Id: ddns-ipfwo.linux.c,v 1.1 2000/07/31 19:03:17 drt Exp $
+/* $Id: ddns-ipfwo.linux.c,v 1.2 2000/08/02 20:13:22 drt Exp $
  *  -- drt@ailis.de
  *
  * Linux specific daemon for changing firewall rules on the fly
  *
  * $Log: ddns-ipfwo.linux.c,v $
+ * Revision 1.2  2000/08/02 20:13:22  drt
+ * -V
+ *
  * Revision 1.1  2000/07/31 19:03:17  drt
  * initial revision
  *
@@ -39,7 +42,7 @@
 #include "ddns.h"
 //xs#include "libipfwc.h"
 
-static char rcsid[] = "$Id: ddns-ipfwo.linux.c,v 1.1 2000/07/31 19:03:17 drt Exp $";
+static char rcsid[] = "$Id: ddns-ipfwo.linux.c,v 1.2 2000/08/02 20:13:22 drt Exp $";
 
 #define ARGV0 "ddns-ipfwo: "
 #define FATAL "ddns-ipfwo: "
@@ -126,10 +129,12 @@ void doit()
     }
 }
 
-int main()
+int main(int argc, char **argv)
 {
   int fdfifo, fdfifowrite;
   char *x;
+
+  VERSIONINFO;
 
   x = env_get("WORKDIR");
   if (!x)

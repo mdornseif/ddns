@@ -1,9 +1,11 @@
-# $Id: Makefile,v 1.23 2000/07/31 19:43:02 drt Exp $
+# $Id: Makefile,v 1.24 2000/08/02 20:13:22 drt Exp $
 #  --drt@ailis.de
 
 DOWNLOADER = "wget"
 
-CFLAGS=-g -Wall -Idnscache -Ilibtai
+VERSION=\"preAlpha3\"
+
+CFLAGS=-g -Wall -Idnscache -Ilibtai -DVERSION=$(VERSION)
 LDFLAGS=-g
 
 defaut: client
@@ -81,10 +83,10 @@ hasmkffo.h: dnscache.a
 trymkffo: trymkffo.o
 
 %.html: %.8
-	groff -Thtml $< > $@ 
+	groff -Thtml -mandoc $< > $@ 
 
 %.html: %.5
-	groff -Thtml $< > $@ 
+	groff -Thtml -mandoc $< > $@ 
 
 libs: dnscache.a libtai.a drtlib.a djblib.a
 

@@ -1,7 +1,10 @@
-/* $Id: ddns-snapd.c,v 1.1 2000/07/31 19:03:17 drt Exp $
+/* $Id: ddns-snapd.c,v 1.2 2000/08/02 20:13:22 drt Exp $
  *  --drt@ailis.de
  *
  * $Log: ddns-snapd.c,v $
+ * Revision 1.2  2000/08/02 20:13:22  drt
+ * -V
+ *
  * Revision 1.1  2000/07/31 19:03:17  drt
  * initial revision
  *
@@ -31,7 +34,7 @@
 #include "dAVLTree.h"
 #include "traversedirhier.h"
 
-static char rcsid[]="$Id: ddns-snapd.c,v 1.1 2000/07/31 19:03:17 drt Exp $";
+static char rcsid[]="$Id: ddns-snapd.c,v 1.2 2000/08/02 20:13:22 drt Exp $";
 
 #define ARGV0 "ddnsd-snapd: "
 #define FATAL "ddnsd-snapd: fatal: "
@@ -216,11 +219,13 @@ void doit()
     }
 }
 
-int main()
+int main(int argc, char **argv)
 {
   int fdfifo, fdfifowrite;
   char *x;
   unsigned long id;
+
+  VERSIONINFO;
 
   x = env_get("WORKDIR");
   if (!x)

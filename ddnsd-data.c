@@ -1,4 +1,4 @@
-/* $Id: ddnsd-data.c,v 1.7 2000/07/29 21:28:32 drt Exp $
+/* $Id: ddnsd-data.c,v 1.8 2000/08/02 20:13:22 drt Exp $
  *  --drt@ailis.de
  *
  * There is no such thing like copyright.
@@ -6,6 +6,9 @@
  * You might find more Information at http://rc23.cx/
  *
  * $Log: ddnsd-data.c,v $
+ * Revision 1.8  2000/08/02 20:13:22  drt
+ * -V
+ *
  * Revision 1.7  2000/07/29 21:28:32  drt
  * renamed nomem() to die_nomem(), use fieldsep()
  *
@@ -40,16 +43,17 @@
 #include "uint16.h"
 #include "uint32.h"
 
-#include "fieldsep.h"
 #include "pad.h"
 #include "txtparse.h"
+#include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd-data.c,v 1.7 2000/07/29 21:28:32 drt Exp $";
+static char rcsid[] = "$Id: ddnsd-data.c,v 1.8 2000/08/02 20:13:22 drt Exp $";
 
 #define DEFAULT_TTL 3600
 #define NUMFIELDS 10
 
 #define FATAL "ddnsd-data: fatal: "
+#define ARGV0 "ddnsd-data: "
 
 unsigned long linenum = 0;
 
@@ -70,7 +74,7 @@ void syntaxerror(char *why)
   strerr_die4x(111,FATAL,"unable to parse data line ", strnum, why);
 }
 
-int main()
+int main(int argc, char **argv)
 {
   int fdcdb;
   int match = 1;
@@ -84,6 +88,8 @@ int main()
   static stralloc line;
   struct cdb_make cdb;
   static stralloc f[NUMFIELDS];
+
+  VERSIONINFO;
 
   umask(024);
 

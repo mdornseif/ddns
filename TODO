@@ -1,52 +1,67 @@
+BETA 0.1
+
 ERRORS
-* create html-pages
+* ddnsd is not handling tracedir/
 * stat(2) seems to be completly freaked out on my LinuxPPC, find out why.
-* limits
 * ddns-pipe.5
+* ddns-file-5
 * ddns-snapd-conf.8
 * ddns-snapd.8
+* ddns-ipfwo.8
+* ddns-ipfwo-conf.8
+* setup-server.sh
 
 CLEANUPS
 * README
 * proofreading of man pages
-* ddns-clientd: defaults
-* ddns-clientd, ddns-cleand: clean up sig.*
-* clean up sourcecode
-* ddnsd, filedns, ddns-clientd: clean up log/error messages
-* -Wall
-* check behaviour under error-conditions
 * filedns, ddns-cleand: unify the parsing of ddns-file(5) 
-* ddnsd-cleand: tuning
-* filedns: droprootordie()
 * ddnsd: get rid of lost tmp/files 
-* filedns, ddns-cleand, ddns-clientd, ddnsd-cdbwrite: check for memory leaks
-* filedns.8: document X
-* ddnsd: loc handling
+* filedns.8: document all
 * ddnsd: log pid
-* filedns, ddns-clientd and ddns-snapd are to long
-* loc_scan(), loc_fmt()
+* ddns-ipfwo: seperate into different files
 
 FEATURES
+* ddns-clientd: one shot mode
+* use libdjb/split distribution into directorys
+* ddns-clientd, ddns-cleand: clean up sig.*
 * ddns-cdbout
-* ddnsd, ddns-cleand: a way to lock entrys (sticky bit?)
-* use libdjb
+* ddns-ipfwo: read whole database at startup
+
+*****
+
+VERSION 0.2
+
+CLEANUPS
+* all long runbning daemons: check for memory/filedescriptor leaks
+* ddns-ipfwo: distinguishing between linux freebsd & co
+* clean up sourcecode
+* ddns-clientd: defaults
+* ddnsd, filedns, ddns-clientd: clean up log/error messages
 * filedns: SOA handling
-* ddns-clientd: make commandline more flexible
-* ddns-clientd: -q -v parameter
 * use timeout for all calls which could block forever. (NFS stuff etc.)
 * ddns-clientd: support for round-robbin dns / multiple adresses of the server ip 
 * ddns-clientd, ddnsd, filedns: support for ipv6 as a transport
-* ddns-bindupo
-* ddns-ipfwo: dead whole database at startup
-* ddns-ipchaino
-* ddns-slaveo 
-* ddns-bindout
-* ddns-tinout
+* loc_scan(), loc_fmt()
+* check behaviour under error-conditions
+* filedns, ddns-clientd and ddns-snapd are to long
+* permissions
+
+FEATURES
+* ddnsd-cleand: tuning
+* filedns: droprootordie()
+* ddns-clientd: make commandline more flexible
+* ddns-clientd: -q -v parameter
+* ddnsd, ddns-cleand: a way to lock entrys (sticky bit?)
+* limits
+* multiplatform GUI client
 * ddns-dxfsout
 * random()
-
-BLUE SKY
+* ddns-slaveo 
+* ddns-bindzout
+* ddnsd-slave
+* ddns-bindupo
+* ddns-tinout
+* ddns-DXFRout
 * UDP as a transport
 * use multiple servers which are connected by multicast
 * support for mutiple zones in filedns/ddnsd ?
-* multiplatform GUI client

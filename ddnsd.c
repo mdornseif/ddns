@@ -1,4 +1,4 @@
-/* $Id: ddnsd.c,v 1.20 2000/07/31 19:12:01 drt Exp $
+/* $Id: ddnsd.c,v 1.21 2000/08/02 20:13:22 drt Exp $
  *   --drt@ailis.de
  *
  * server for ddns - this file is to long
@@ -8,6 +8,9 @@
  * (K)allisti
  *
  * $Log: ddnsd.c,v $
+ * Revision 1.21  2000/08/02 20:13:22  drt
+ * -V
+ *
  * Revision 1.20  2000/07/31 19:12:01  drt
  * seperated into muptiple source files
  *
@@ -116,7 +119,9 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.20 2000/07/31 19:12:01 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.21 2000/08/02 20:13:22 drt Exp $";
+
+#define ARGV0 "ddnsd: "
 
 static char *datadir;
 
@@ -172,6 +177,8 @@ int main(int argc, char **argv)
   struct ddnsrequest p = { 0 };
   stralloc username = {0};
   uint32 ttl;
+
+  VERSIONINFO;
 
   /* chroot() to $ROOT and switch to $UID:$GID */
   droprootordie("ddnsd: ");

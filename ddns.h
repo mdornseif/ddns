@@ -1,6 +1,9 @@
-/* $Id: ddns.h,v 1.10 2000/07/31 19:15:56 drt Exp $
+/* $Id: ddns.h,v 1.11 2000/08/02 20:13:22 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.11  2000/08/02 20:13:22  drt
+ * -V
+ *
  * Revision 1.10  2000/07/31 19:15:56  drt
  * ddns-file(5) format changed
  * a lot of restructuring
@@ -110,22 +113,33 @@ struct ddnsreply {
   struct taia timestamp;                   // 192
  };
 
-/* definition foe standard C functions */
-/* I dont want to include headers which include 
-   headers which include headers which include stuff 
-   I don't understans */
 
-extern int close(int);
-extern int chdir(const char *);
-extern int chroot(const char *);
-extern int unlink(const char *);
+
+#define VERSIONINFO if(argc > 0 && argv[1][0] == '-' && argv[1][1] == 'V') \
+   { \
+     buffer_puts(buffer_2, ARGV0 "Version "); \
+     buffer_puts(buffer_2, VERSION); \
+     buffer_putsflush(buffer_2, " (Build: "); \
+     buffer_puts(buffer_2, __DATE__); \
+     buffer_putsflush(buffer_2, ")\n"); \
+     _exit(0); \
+   }
 
 extern void stralloc_free(stralloc *sa);  
 extern void stralloc_cleanlineend(stralloc *line);
-
 extern int fieldsep(stralloc f[], int numfields, stralloc *line, char sepchar);
 extern void ddns_parseline(char *s, uint32 *uid, char *ip4, char *ip6, char *loc);
 extern void openandwrite(char *filename, stralloc *sa);
 extern int write_fifodir(char *dirname, stralloc *sa, void (*openandwrite)(char *filename, stralloc *sa));
+
+
+/* definition foe standard C functions */
+/* I dont want to include headers which include 
+   headers which include headers which include stuff 
+   I don't understans */
+extern int close(int);
+extern int chdir(const char *);
+extern int chroot(const char *);
+extern int unlink(const char *);
 
 #endif
