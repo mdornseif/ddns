@@ -3,7 +3,6 @@
 * fix build process. At the moment one has to do "cd djblib; make;
   cd ../lib; make; cd .." before building.
 * fix Makefiles
-* remove cruft from CVS repository
 * set paranoid umasks
 * checking connection between source ip and requesting ip
 * clean up log messages
@@ -21,4 +20,4 @@
 * driver for ddnsc
 * ddnsc: reading passwd from enviroment
 * ddnsd: chrooting
-* cleaning tmp/tilenames in tmp
+* update protocoll for udp
