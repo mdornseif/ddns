@@ -1,4 +1,9 @@
-/*
+/* $Id: dAVLTree.h,v 1.2 2000/07/29 21:05:48 drt Exp $
+ *  --drt@ailis.de
+ *
+ * iAVLTree.h: Header file for AVLTrees with ddns data.
+ *
+ * Based on:
  * iAVLTree.h: Header file for AVLTrees with long integer keys.
  * Copyright (C) 1998  Michael H. Buselli
  *
@@ -16,52 +21,62 @@
  * License along with this library; if not, write to the Free
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * The author of this library can be reached at the following address:
- * Michael H. Buselli
- * 4334 N. Hazel St. #515
- * Chicago, IL  60613-1456
- *
- * Or you can send email to <cosine@tezcat.com>.
- * The official web page for this product is:
+ * The official web page for THE ORIGINAL product is:
  * http://www.tezcat.com/~cosine/pub/AVLTree/
  *
- * This is version 0.1.0 (alpha).
+ * This is based on version 0.1.0 (alpha).
+ *
+ * THIS IS A MODIFIED VERSION FOR DDNS
+ *
+ * You might find more Information at http://rc23.cx/
+ *
+ * $Log: dAVLTree.h,v $
+ * Revision 1.2  2000/07/29 21:05:48  drt
+ * renamed functions to dAVL*
+ * now data is directly saved in the leaves to lessen
+ * memory fragmentation and overhead.
+ *
  */
 
-#ifndef _IAVLTREE_H_
-#define _IAVLTREE_H_
+#ifndef _DAVLTREE_H_
+#define _DAVLTREE_H_
 
+#include "uint32.h"
 
-typedef struct _iAVLNode {
-  long key;
+typedef struct _dAVLNode {
+
+  uint32 key;  /* = uid */
+  char ip4[4];
+  char ip6[16];
+  char loc[16];
   long depth;
-  void *item;
-  struct _iAVLNode *parent;
-  struct _iAVLNode *left;
-  struct _iAVLNode *right;
-} iAVLNode;
+  struct _dAVLNode *parent;
+  struct _dAVLNode *left;
+  struct _dAVLNode *right;
+} dAVLNode;
 
 
 typedef struct {
-  iAVLNode *top;
+  dAVLNode *top;
   long count;
-  long (*getkey)(const void *item);
-} iAVLTree;
+} dAVLTree;
 
 
 typedef struct {
-  const iAVLTree *avltree;
-  const iAVLNode *curnode;
-} iAVLCursor;
+  const dAVLTree *avltree;
+  const dAVLNode *curnode;
+} dAVLCursor;
 
 
-extern iAVLTree *iAVLAllocTree (long (*getkey)(void const *item));
-extern void iAVLFreeTree (iAVLTree *avltree, void (freeitem)(void *item));
-extern int iAVLInsert (iAVLTree *avltree, void *item);
-extern void *iAVLSearch (iAVLTree const *avltree, long key);
-extern int iAVLDelete (iAVLTree *avltree, long key);
-extern void *iAVLFirst (iAVLCursor *avlcursor, iAVLTree const *avltree);
-extern void *iAVLNext (iAVLCursor *avlcursor);
+extern dAVLTree *dAVLAllocTree ();
+int dAVLInsert (dAVLTree *avltree, uint32 uid, char *ip4, char *ip6, char *loc);
+extern dAVLNode *dAVLFirst (dAVLCursor *avlcursor, dAVLTree const *avltree);
+extern dAVLNode *dAVLNext (dAVLCursor *avlcursor);
+extern int dAVLDelete (dAVLTree *avltree, uint32 key);
 
+/*
+extern void dAVLFreeTree (dAVLTree *avltree, void (freeitem)(void *item));
+extern void *dAVLSearch (dAVLTree const *avltree, long key);
+*/
 
 #endif

@@ -1,4 +1,9 @@
-/*
+/* $Id: dAVLTree.c,v 1.2 2000/07/29 21:05:48 drt Exp $
+ *  --drt@ailis.de
+ *
+ * Source code for the AVLTree library (ddns version).
+ *
+ * Based on:
  * iAVLTree.c: Source code for the AVLTree library (long integer version).
  * Copyright (C) 1998  Michael H. Buselli
  *
@@ -16,27 +21,35 @@
  * License along with this library; if not, write to the Free
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * The author of this library can be reached at the following address:
- * Michael H. Buselli
- * 4334 N. Hazel St. #515
- * Chicago, IL  60613-1456
- *
- * Or you can send email to <cosine@tezcat.com>.
- * The official web page for this product is:
+ * The official web page OF THE ORIGINAL product is:
  * http://www.tezcat.com/~cosine/pub/AVLTree/
  *
- * This is version 0.1.0 (alpha).
+ * This is based on is version 0.1.0 (alpha).
+ *
+ * THIS IS A MODIFIED VERSION FOR DDNS
+ *
+ * You might find more Information at http://rc23.cx/
+ * 
+ * $Log: dAVLTree.c,v $
+ * Revision 1.2  2000/07/29 21:05:48  drt
+ * renamed functions to dAVL*
+ * now data is directly saved in the leaves to lessen
+ * memory fragmentation and overhead.
+ *
  */
 
-#include <stdlib.h>
-#include "iAVLTree.h"
+#include <malloc.h>
+#include "byte.h" 
 
-static iAVLNode *iAVLCloseSearchNode (iAVLTree const *avltree, long key);
-static void iAVLRebalanceNode (iAVLTree *avltree, iAVLNode *avlnode);
-static void iAVLFreeBranch (iAVLNode *avlnode, void (freeitem)(void *item));
-static void iAVLFillVacancy (iAVLTree *avltree,
-                             iAVLNode *origparent, iAVLNode **superparent,
-                             iAVLNode *left, iAVLNode *right);
+#include "dAVLTree.h"
+#include "ddns.h"
+
+static dAVLNode *dAVLCloseSearchNode (dAVLTree const *avltree, uint32 key);
+static void dAVLRebalanceNode (dAVLTree *avltree, dAVLNode *avlnode);
+static void dAVLFreeBranch (dAVLNode *avlnode);
+static void dAVLFillVacancy (dAVLTree *avltree,
+                             dAVLNode *origparent, dAVLNode **superparent,
+                             dAVLNode *left, dAVLNode *right);
 
 #define MAX(x, y)      ((x) > (y) ? (x) : (y))
 #define MIN(x, y)      ((x) < (y) ? (x) : (y))
@@ -46,71 +59,71 @@ static void iAVLFillVacancy (iAVLTree *avltree,
 
 
 /*
- * iAVLAllocTree:
- * Allocate memory for a new AVL tree and set the getkey function for
- * that tree.  The getkey function should take an item and return a long
- * integer that is to be used for indexing this object in the AVL tree.
+ * dAVLAllocTree:
+ * Allocate memory for a new AVL tree. 
  * On success, a pointer to the malloced iAVLTree is returned.  If there
  * was a malloc failure, then NULL is returned.
  */
-iAVLTree *iAVLAllocTree (long (*getkey)(void const *item))
+dAVLTree *dAVLAllocTree ()
 {
-  iAVLTree *rc;
+  dAVLTree *rc;
 
-  rc = malloc(sizeof(iAVLTree));
+  rc = malloc(sizeof(dAVLTree));
   if (rc == NULL)
     return NULL;
 
   rc->top = NULL;
   rc->count = 0;
-  rc->getkey = getkey;
   return rc;
 }
 
 
 /*
- * iAVLFreeTree:
+ * dAVLFreeTree:
  * Free all memory used by this AVL tree.  If freeitem is not NULL, then
  * it is assumed to be a destructor for the items reference in the AVL
  * tree, and they are deleted as well.
  */
-void iAVLFreeTree (iAVLTree *avltree, void (freeitem)(void *item))
+void dAVLFreeTree (dAVLTree *avltree)
 {
   if (avltree->top)
-    iAVLFreeBranch(avltree->top, freeitem);
+    dAVLFreeBranch(avltree->top);
   free(avltree);
 }
 
 
 /*
- * iAVLInsert:
+ * dAVLInsert:
  * Create a new node and insert an item there.
  *
  * Returns  0 on success,
  *         -1 on malloc failure,
  *          3 if duplicate key.
  */
-int iAVLInsert (iAVLTree *avltree, void *item)
+int dAVLInsert (dAVLTree *avltree, uint32 uid, char *ip4, char *ip6, char *loc)
 {
-  iAVLNode *newnode;
-  iAVLNode *node;
-  iAVLNode *balnode;
-  iAVLNode *nextbalnode;
+  dAVLNode *newnode;
+  dAVLNode *node;
+  dAVLNode *balnode;
+  dAVLNode *nextbalnode;
 
-  newnode = malloc(sizeof(iAVLNode));
+  newnode = malloc(sizeof(dAVLNode));
   if (newnode == NULL)
     return -1;
-
-  newnode->key = avltree->getkey(item);
-  newnode->item = item;
+ 
+  newnode->key = uid;
+  byte_copy(newnode->ip4, 4, ip4);
+  byte_copy(newnode->ip6, 16, ip6);
+  byte_copy(newnode->loc, 16, loc);
   newnode->depth = 1;
   newnode->left = NULL;
   newnode->right = NULL;
   newnode->parent = NULL;
 
   if (avltree->top != NULL) {
-    node = iAVLCloseSearchNode(avltree, newnode->key);
+    node = dAVLCloseSearchNode(avltree, newnode->key);
 
+    /* XXX: handle this more intelligent */ 
     if (node->key == newnode->key) {
       free(newnode);
       return 3;
@@ -130,7 +143,7 @@ int iAVLInsert (iAVLTree *avltree, void *item)
 
     for (balnode = node->parent; balnode; balnode = nextbalnode) {
       nextbalnode = balnode->parent;
-      iAVLRebalanceNode(avltree, balnode);
+      dAVLRebalanceNode(avltree, balnode);
     }
   }
 
@@ -144,51 +157,51 @@ int iAVLInsert (iAVLTree *avltree, void *item)
 
 
 /*
- * iAVLSearch:
+ * dAVLSearch:
  * Return a pointer to the item with the given key in the AVL tree.  If
  * no such item is in the tree, then NULL is returned.
  */
-void *iAVLSearch (iAVLTree const *avltree, long key)
+uint32 dAVLSearch (dAVLTree const *avltree, long key)
 {
-  iAVLNode *node;
+  dAVLNode *node;
 
-  node = iAVLCloseSearchNode(avltree, key);
+  node = dAVLCloseSearchNode(avltree, key);
 
   if (node && node->key == key)
-    return node->item;
+    return key;
 
-  return NULL;
+  return 0;
 }
 
 
 /*
- * iAVLDelete:
+ * dAVLDelete:
  * Deletes the node with the given key.  Does not delete the item at
  * that key.  Returns 0 on success and -1 if a node with the given key
  * does not exist.
  */
-int iAVLDelete (iAVLTree *avltree, long key)
+int dAVLDelete (dAVLTree *avltree, uint32 key)
 {
-  iAVLNode *avlnode;
-  iAVLNode *origparent;
-  iAVLNode **superparent;
-
-  avlnode = iAVLCloseSearchNode(avltree, key);
+  dAVLNode *avlnode;
+  dAVLNode *origparent; 
+  dAVLNode **superparent;
+ 
+  avlnode = dAVLCloseSearchNode(avltree, key); 
   if (avlnode == NULL || avlnode->key != key)
     return -1;
-
+ 
   origparent = avlnode->parent;
-
+ 
   if (origparent) {
-    if (avlnode->key < avlnode->parent->key)
+    if (avlnode->key < avlnode->parent->key) 
       superparent = &(avlnode->parent->left);
-    else
+    else 
       superparent = &(avlnode->parent->right);
   }
   else
     superparent = &(avltree->top);
 
-  iAVLFillVacancy(avltree, origparent, superparent,
+  dAVLFillVacancy(avltree, origparent, superparent, 
                   avlnode->left, avlnode->right);
   free(avlnode);
   avltree->count--;
@@ -197,13 +210,13 @@ int iAVLDelete (iAVLTree *avltree, long key)
 
 
 /*
- * iAVLFirst:
+ * dAVLFirst:
  * Initializes an iAVLCursor object and returns the item with the lowest
  * key in the iAVLTree.
  */
-void *iAVLFirst (iAVLCursor *avlcursor, iAVLTree const *avltree)
+dAVLNode *dAVLFirst (dAVLCursor *avlcursor, dAVLTree const *avltree)
 {
-  const iAVLNode *avlnode;
+  const dAVLNode *avlnode;
 
   avlcursor->avltree = avltree;
 
@@ -216,19 +229,19 @@ void *iAVLFirst (iAVLCursor *avlcursor, iAVLTree const *avltree)
        avlnode->left != NULL;
        avlnode = avlnode->left);
   avlcursor->curnode = avlnode;
-  return avlnode->item;
+  return avlnode;
 }
 
 
 /*
- * iAVLNext:
- * Called after an iAVLFirst() call, this returns the item with the least
+ * dAVLNext:
+ * Called after an dAVLFirst() call, this returns the item with the least
  * key that is greater than the last item returned either by iAVLFirst()
  * or a previous invokation of this function.
  */
-void *iAVLNext (iAVLCursor *avlcursor)
+dAVLNode *dAVLNext (dAVLCursor *avlcursor)
 {
-  const iAVLNode *avlnode;
+  const dAVLNode *avlnode;
 
   avlnode = avlcursor->curnode;
 
@@ -237,7 +250,7 @@ void *iAVLNext (iAVLCursor *avlcursor)
          avlnode->left != NULL;
          avlnode = avlnode->left);
     avlcursor->curnode = avlnode;
-    return avlnode->item;
+    return avlnode;
   }
 
   while (avlnode->parent && avlnode->parent->left != avlnode) {
@@ -250,18 +263,17 @@ void *iAVLNext (iAVLCursor *avlcursor)
   }
 
   avlcursor->curnode = avlnode->parent;
-  return avlnode->parent->item;
+  return avlnode->parent;
 }
 
-
 /*
- * iAVLCloseSearchNode:
+ * dAVLCloseSearchNode:
  * Return a pointer to the node closest to the given key.
  * Returns NULL if the AVL tree is empty.
  */
-iAVLNode *iAVLCloseSearchNode (iAVLTree const *avltree, long key)
+dAVLNode *dAVLCloseSearchNode (dAVLTree const *avltree, uint32 key)
 {
-  iAVLNode *node;
+  dAVLNode *node;
 
   node = avltree->top;
 
@@ -290,7 +302,7 @@ iAVLNode *iAVLCloseSearchNode (iAVLTree const *avltree, long key)
 
 
 /*
- * iAVLRebalanceNode:
+ * dAVLRebalanceNode:
  * Rebalances the AVL tree if one side becomes too heavy.  This function
  * assumes that both subtrees are AVL trees with consistant data.  This
  * function has the additional side effect of recalculating the depth of
@@ -298,13 +310,13 @@ iAVLNode *iAVLCloseSearchNode (iAVLTree const *avltree, long key)
  * function, if a rebalance takes place, the top of this subtree is no
  * longer going to be the same node.
  */
-void iAVLRebalanceNode (iAVLTree *avltree, iAVLNode *avlnode)
+void dAVLRebalanceNode (dAVLTree *avltree, dAVLNode *avlnode)
 {
   long depthdiff;
-  iAVLNode *child;
-  iAVLNode *gchild;
-  iAVLNode *origparent;
-  iAVLNode **superparent;
+  dAVLNode *child;
+  dAVLNode *gchild;
+  dAVLNode *origparent;
+  dAVLNode **superparent;
 
   origparent = avlnode->parent;
 
@@ -402,36 +414,31 @@ void iAVLRebalanceNode (iAVLTree *avltree, iAVLNode *avlnode)
 
 
 /*
- * iAVLFreeBranch:
- * Free memory used by this node and its item.  If the freeitem argument
- * is not NULL, then that function is called on the items to free their
- * memory as well.  In other words, the freeitem function is a
- * destructor for the items in the tree.
+ * dAVLFreeBranch:
+ * Free memory used by this node and its item. 
  */
-void iAVLFreeBranch (iAVLNode *avlnode, void (freeitem)(void *item))
+void dAVLFreeBranch (dAVLNode *avlnode)
 {
   if (avlnode->left)
-    iAVLFreeBranch(avlnode->left, freeitem);
+    dAVLFreeBranch(avlnode->left);
   if (avlnode->right)
-    iAVLFreeBranch(avlnode->right, freeitem);
-  if (freeitem)
-    freeitem(avlnode->item);
+    dAVLFreeBranch(avlnode->right);
   free(avlnode);
 }
 
 
 /*
- * iAVLFillVacancy:
+ * dAVLFillVacancy:
  * Given a vacancy in the AVL tree by it's parent, children, and parent
  * component pointer, fill that vacancy.
  */
-void iAVLFillVacancy (iAVLTree *avltree,
-                      iAVLNode *origparent, iAVLNode **superparent,
-                      iAVLNode *left, iAVLNode *right)
+void dAVLFillVacancy (dAVLTree *avltree,
+                      dAVLNode *origparent, dAVLNode **superparent,
+                      dAVLNode *left, dAVLNode *right)
 {
-  iAVLNode *avlnode;
-  iAVLNode *balnode;
-  iAVLNode *nextbalnode;
+  dAVLNode *avlnode;
+  dAVLNode *balnode;
+  dAVLNode *nextbalnode;
 
   if (left == NULL) {
     if (right == NULL) {
@@ -468,6 +475,7 @@ void iAVLFillVacancy (iAVLTree *avltree,
 
   for (; balnode; balnode = nextbalnode) {
     nextbalnode = balnode->parent;
-    iAVLRebalanceNode(avltree, balnode);
+    dAVLRebalanceNode(avltree, balnode);
   }
 }
+
