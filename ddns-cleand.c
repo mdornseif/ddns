@@ -1,4 +1,4 @@
-/* $Id: ddns-cleand.c,v 1.3 2000/07/12 11:44:42 drt Exp $
+/* $Id: ddns-cleand.c,v 1.4 2000/07/17 21:45:24 drt Exp $
  *  --drt@ailis.de
  *
  * cleaning daemon for ddns
@@ -7,7 +7,12 @@
  * in addition it cleans stale entrys in tmp 
  * it later might check is clients are up by pinging them
  *
+ * (K)opyright is myth
+ *
  * $Log: ddns-cleand.c,v $
+ * Revision 1.4  2000/07/17 21:45:24  drt
+ * ddnsd and ddns-cleand now refuse to run as root
+ *
  * Revision 1.3  2000/07/12 11:44:42  drt
  * cleaning of tmp, usage on `,' instead of `:'
  * as a seperator to avoid IPv6 problems.
@@ -29,7 +34,7 @@
 #include "buffer.h"
 #include "byte.h"
 #include "cdb.h"
-#include "droproot.h"
+#include "droprootordie.h"
 #include "env.h"
 #include "error.h"
 #include "fmt.h"
@@ -44,7 +49,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.3 2000/07/12 11:44:42 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.4 2000/07/17 21:45:24 drt Exp $";
 
 /* maximum number of fields in a line */
 #define NUMFIELDS 10
@@ -314,7 +319,7 @@ int main(int argc, char *argv[])
   char *x;
 
   /* chroot() to $ROOT and switch to $UID:$GID */
-  droproot("ddns-cleand: ");
+  droprootordie("ddns-cleand: ");
 
   if (!argv[1]) 
     strerr_die1x(100, "fatal: usage: ddns-cleand dnsdir");

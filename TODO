@@ -1,5 +1,4 @@
 ERRORS
-* ddnsd-cleand.man
 * ddnsd-file.man
 * install scripts
 
@@ -19,6 +18,7 @@ CLEANUPS
 * change semantics of timestamping so ddns-cleand doesn't 
   have to read from data.cdb (P)
 * ddnsd-cleand needs serious tuning
+* droprootordie() in filedns
 
 FEATURES
 * retry connection to server in client
@@ -37,3 +37,4 @@ BLUE SKY
 * UDP as a transport
 * use multiple servers which are connected by multicast
 * support for mutiple zones in filedns ?
+* multiplatform client

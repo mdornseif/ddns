@@ -1,4 +1,5 @@
-# $Id: Makefile,v 1.17 2000/07/17 13:45:56 drt Exp $
+# $Id: Makefile,v 1.18 2000/07/17 21:45:24 drt Exp $
+#  --drt@ailis.de
 
 DOWNLOADER = "wget"
 
@@ -80,7 +81,7 @@ sig_int.o sig_term.o socket_delay.o socket_local.o timeoutconn.o
 	sig_catch.o timeoutconn.o sig.o sig_int.o sig_term.o socket_delay.o \
 	socket_local.o
 
-drtlib.a: iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
+drtlib.a: iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o
 	ar cr drtlib.a iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
 
 setup-client: ddns-cleand

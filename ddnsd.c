@@ -1,8 +1,14 @@
-/* $Id: ddnsd.c,v 1.17 2000/07/14 15:32:51 drt Exp $
+/* $Id: ddnsd.c,v 1.18 2000/07/17 21:45:24 drt Exp $
+ *   --drt@ailis.de
  *
  * server for ddns - this file is to long
  * 
+ * (K)allisti
+ *
  * $Log: ddnsd.c,v $
+ * Revision 1.18  2000/07/17 21:45:24  drt
+ * ddnsd and ddns-cleand now refuse to run as root
+ *
  * Revision 1.17  2000/07/14 15:32:51  drt
  * The timestamp is checked now in ddnsd and an error
  * is returned if there is more than 4000s fuzz.
@@ -82,7 +88,7 @@
 #include "buffer.h"
 #include "byte.h"
 #include "cdb.h"
-#include "droproot.h"
+#include "droprootordie.h"
 #include "env.h"
 #include "error.h"
 #include "fmt.h"
@@ -101,7 +107,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.17 2000/07/14 15:32:51 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.18 2000/07/17 21:45:24 drt Exp $";
 
 static char *datadir;
 
@@ -617,7 +623,7 @@ int main(int argc, char **argv)
   struct ddnsrequest p = { 0 };
   
   /* chroot() to $ROOT and switch to $UID:$GID */
-  droproot("ddnsd: ");
+  droprootordie("ddnsd: ");
 
   umask(024);
 
