@@ -1,6 +1,10 @@
-/* $Id: ddns.h,v 1.2 2000/04/24 16:27:26 drt Exp $
+/* $Id: ddns.h,v 1.3 2000/04/27 12:12:40 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.3  2000/04/27 12:12:40  drt
+ * Changed data packets to 32+512 Bits size, added functionality to
+ * transport IPv6 adresses and LOC records.
+ *
  * Revision 1.2  2000/04/24 16:27:26  drt
  * added ENOENTRYUSED
  *
@@ -35,19 +39,29 @@
 struct ddnsrequest {
   uint32 uid;
   uint16 type;                             //  16
-  uint16 random;                           //  32
+  uint16 random1;                          //  32
   uint32 magic;                            //  64
   struct taia timestamp;                   // 192
-  uint32 ip;                               // 224  
-  uint32 reserved;                         // 256
+  uint32 ip4;                              // 224
+  unsigned char ip6[16];                    // 352
+  unsigned char reserved1;                 // 360         
+  unsigned char loc_size;                  // 368
+  unsigned char loc_hpre;                  // 376
+  unsigned char loc_vpre;                  // 384
+  uint32 loc_lat;                          // 416
+  uint32 loc_long;                         // 448
+  uint32 loc_alt;                          // 480
+  uint16 random2;                          // 496
+  uint16 reserved2;                        // 512
 };
 
 struct ddnsreply {
   uint32 uid;
   uint16 type;                             //  16
-  uint16 random;                           //  32
+  uint16 random1;                          //  32
   uint32 magic;                            //  64
   struct taia timestamp;                   // 192
   struct tai leasetime;                    // 256
+  uint32 reserved[8];                      // 512
 };
 

@@ -1,8 +1,12 @@
-/* $Id: ddnsc.c,v 1.3 2000/04/24 16:30:56 drt Exp $
+/* $Id: ddnsc.c,v 1.4 2000/04/27 12:12:40 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.4  2000/04/27 12:12:40  drt
+ * Changed data packets to 32+512 Bits size, added functionality to
+ * transport IPv6 adresses and LOC records.
+ *
  * Revision 1.3  2000/04/24 16:30:56  drt
  * First basically working version implementing full protocol
  *
@@ -27,6 +31,8 @@
 #include "lib/rijndael.h"
 
 #include "ddns.h"
+
+static char rcsid[] = "$Id: ddnsc.c,v 1.4 2000/04/27 12:12:40 drt Exp $";
 
 #define FATAL "ddnsc: "
 
@@ -106,7 +112,7 @@ void dump_packet(struct ddnsreply *p, char *info)
   buffer_puts(buffer_2, " magic=0x");
   buffer_put(buffer_2, strnum, fmt_xint(strnum, p->magic));
   buffer_puts(buffer_2, " rnd=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random1));
   buffer_puts(buffer_2, "\n");
   buffer_flush(buffer_2);  
 }
@@ -132,6 +138,7 @@ int ddnsc_recive(struct ddnsreply *p)
   
   /* decrypt with rijndael */
   rijndaelDecrypt((char *) &ptmp.type);
+  rijndaelDecrypt((char *) &ptmp.type + 32);
 
   uint16_unpack((char*) &ptmp.type, &p->type);
   uint32_unpack((char*) &ptmp.magic, &p->magic);
@@ -162,17 +169,27 @@ static void ddnsc_send(struct ddnsrequest *p)
   taia_pack((char *) &ptmp.timestamp, &t);
   uint32_pack((char*) &ptmp.uid, p->uid);
   uint32_pack((char*) &ptmp.magic, p->magic);
-  uint32_pack((char*) &ptmp.ip, p->ip);
+  uint32_pack((char*) &ptmp.ip4, p->ip4);
+  byte_copy(&ptmp.ip6, 16, p->ip6);
   uint16_pack((char*) &ptmp.type, p->type);
-  ptmp.random = randomMT() & 0xffff;
+  uint32_pack((char*) &ptmp.loc_lat, p->loc_lat);
+  uint32_pack((char*) &ptmp.loc_long, p->loc_long);
+  uint32_pack((char*) &ptmp.loc_alt, p->loc_alt);
+  ptmp.loc_size = p->loc_size;
+  ptmp.loc_hpre = p->loc_hpre;
+  ptmp.loc_vpre = p->loc_vpre;
+  ptmp.random1 = randomMT() & 0xffff;
+  ptmp.random2 = randomMT() & 0xffff;
   /* fill reserved with random data */
-  ptmp.reserved = randomMT();
+  ptmp.reserved1 = randomMT() & 0xff;;
+  ptmp.reserved2 = randomMT() & 0xffff;
 
   /* initialize rijndael with 256 bit blocksize and 128 bit keysize */
   rijndaelKeySched(8, 4, key);
     
   /* Encrypt with rijndael */
   rijndaelEncrypt((char *) &ptmp.type);
+  rijndaelEncrypt((char *) &ptmp.type + 32);
 
   buffer_put(&netwrite, (char *) &ptmp, sizeof(struct ddnsrequest));
   buffer_flush(&netwrite); 
@@ -231,7 +248,7 @@ main(int argc, char **argv)
     }
   
   p.uid = uid;
-  byte_copy(&p.ip, 4, ip);
+  byte_copy(&p.ip4, 4, ip);
 
   ddnsc_send(&p);
   ddnsc_recive(&r);

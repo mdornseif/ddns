@@ -1,8 +1,12 @@
-/* $Id: ddnsd.c,v 1.6 2000/04/27 09:41:20 drt Exp $
+/* $Id: ddnsd.c,v 1.7 2000/04/27 12:12:40 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.7  2000/04/27 12:12:40  drt
+ * Changed data packets to 32+512 Bits size, added functionality to
+ * transport IPv6 adresses and LOC records.
+ *
  * Revision 1.6  2000/04/27 09:41:20  drt
  * Tiny Bugfix
  *
@@ -61,16 +65,25 @@ void ddnsd_send(struct ddnsreply *p)
   /* fill our structure */
   /* and get it into network byte order */
   p->magic = DDNS_MAGIC;
-  ptmp.random = randomMT() & 0xffff;
+  ptmp.random1 = randomMT() & 0xffff;
   taia_now(&t);
   taia_pack((char *) &ptmp.timestamp, &t);
   tai_pack((char *) &ptmp.leasetime, &p->leasetime);
   uint32_pack((char*) &ptmp.uid, p->uid);
   uint16_pack((char*) &ptmp.type, p->type);
   uint32_pack((char*) &ptmp.magic, p->magic);
+  ptmp.reserved[0] = randomMT();
+  ptmp.reserved[1] = randomMT();
+  ptmp.reserved[2] = randomMT();
+  ptmp.reserved[3] = randomMT();
+  ptmp.reserved[4] = randomMT();
+  ptmp.reserved[5] = randomMT();
+  ptmp.reserved[6] = randomMT();
+  ptmp.reserved[7] = randomMT();
   
   /* encrypt with rijndael, key shedule was already set up when reciving data */
   rijndaelEncrypt((char *) &ptmp.type);
+  rijndaelEncrypt((char *) &ptmp.type + 32);
 
   buffer_put(buffer_1, (char *) &ptmp, sizeof(struct ddnsreply));
   buffer_flush(buffer_1); 
@@ -137,9 +150,11 @@ void dump_packet(struct ddnsrequest *p, char *info)
   buffer_puts(buffer_2, " magic=0x");
   buffer_put(buffer_2, strnum, fmt_xint(strnum, p->magic));
   buffer_puts(buffer_2, " ip=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->ip));
-  buffer_puts(buffer_2, " rnd=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->ip4));
+  buffer_puts(buffer_2, " rnd1=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random1));
+  buffer_puts(buffer_2, " rnd2=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random2));
   buffer_puts(buffer_2, "\n");
   buffer_flush(buffer_2);
   
@@ -210,13 +225,17 @@ int ddnsd_recive(struct ddnsrequest *p)
   /* initialize rijndael with 256 bit blocksize and 128 bit keysize */
   rijndaelKeySched(8, 4, key);
   
-  /* encrypt with rijndael */
+  /* decrypt with rijndael */
   rijndaelDecrypt((char *) &ptmp.type);
+  rijndaelDecrypt((char *) &ptmp.type + 32);
 
   uint16_unpack((char*) &ptmp.type, &p->type);
   uint32_unpack((char*) &ptmp.magic, &p->magic);
-  uint32_unpack((char*) &ptmp.ip, &p->ip);
+  uint32_unpack((char*) &ptmp.ip4, &p->ip4);
   taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
+  uint32_unpack((char*) &ptmp.loc_lat, &p->loc_lat);
+  uint32_unpack((char*) &ptmp.loc_long, &p->loc_long);
+  uint32_unpack((char*) &ptmp.loc_alt, &p->loc_alt);
 
   dump_packet(p, "entpackt");
 
@@ -293,7 +312,7 @@ void ddnsd_setentry( struct ddnsrequest *p)
   /* write data to file */
   buffer_init(&ssout,write, fd, outbuf, sizeof outbuf);
   buffer_puts(&ssout, "=");
-  buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip));
+  buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip4));
   buffer_puts(&ssout, ":");
   buffer_put(&ssout, strnum, fmt_xlong(strnum, p->uid));
   buffer_puts(&ssout, "\n");
