@@ -1,8 +1,15 @@
-/* $Id: ddnsd.c,v 1.12 2000/05/02 21:46:31 drt Exp $
+/* $Id: ddnsd.c,v 1.13 2000/07/07 13:32:47 drt Exp $
  *
  * server for ddns - this file is to long
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.13  2000/07/07 13:32:47  drt
+ * ddnsd and ddnsc now basically work as they should and are in
+ * a usable state. The protocol is changed a little bit to lessen
+ * problems with alignmed and so on.
+ * Tested on IA32 and PPC.
+ * Both are still missing support for LOC.
+ *
  * Revision 1.12  2000/05/02 21:46:31  drt
  * usage of 256 bit keys,
  * huge code cleanup,
@@ -58,12 +65,14 @@
 #include <utime.h>     /* utimbuf */
 
 #include "buffer.h"
+#include "byte.h"
 #include "cdb.h"
 #include "droproot.h"
 #include "env.h"
 #include "error.h"
 #include "fmt.h"
 #include "ip4.h"
+#include "ip6.h"
 #include "now.h"
 #include "open.h"
 #include "readwrite.h"
@@ -76,7 +85,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.12 2000/05/02 21:46:31 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.13 2000/07/07 13:32:47 drt Exp $";
 
 static char *datadir;
 
@@ -102,10 +111,11 @@ void ddnsd_send(struct ddnsreply *p)
   ptmp.random1 = randomMT() & 0xffff;
   taia_now(&t);
   taia_pack((char *) &ptmp.timestamp, &t);
-  tai_pack((char *) &ptmp.leasetime, &p->leasetime);
+  uint32_pack((char *) &ptmp.leasetime, p->leasetime);
   uint32_pack((char*) &ptmp.uid, p->uid);
   uint16_pack((char*) &ptmp.type, p->type);
   uint32_pack((char*) &ptmp.magic, p->magic);
+  /* some unused bytes are filled with random data to make cryptoanalysis harder */
   ptmp.reserved[0] = randomMT();
   ptmp.reserved[1] = randomMT();
   ptmp.reserved[2] = randomMT();
@@ -114,7 +124,7 @@ void ddnsd_send(struct ddnsreply *p)
   ptmp.reserved[5] = randomMT();
   ptmp.reserved[6] = randomMT();
   ptmp.reserved[7] = randomMT();
-  
+
   /* encrypt with rijndael, key shedule was already set up when reciving data */
   rijndaelEncrypt((char *) &ptmp.type);
   rijndaelEncrypt((char *) &ptmp.type + 32);
@@ -139,11 +149,10 @@ void ddnsd_log(uint32 uid, char *str)
   buffer_put(buffer_2, strnum, fmt_ulong(strnum, uid));
   buffer_puts(buffer_2, ": ");
   buffer_puts(buffer_2, str);
-  buffer_puts(buffer_2, "\n");
   buffer_flush(buffer_2);
 }
 
-/* Sends an error packet to the client and logs an error */
+/* sends an error packet to the client and logs an error */
 void ddnsd_send_err(uint32 uid, uint16 errtype, char *errstr)
 {
   struct ddnsreply p;
@@ -151,16 +160,17 @@ void ddnsd_send_err(uint32 uid, uint16 errtype, char *errstr)
   p.type = errtype;
   p.uid = uid;
   
-  /* leasetime is unused when sending error packets so we fill it with random data */
-  p.leasetime.x = (uint64) (randomMT() & (uint64)((uint64)randomMT() << 32));
+  p.leasetime = 0;
   
   ddnsd_log(uid, errstr);
-  
+  buffer_putsflush(buffer_2, "\n");
+
   ddnsd_send(&p);
   
   exit(111);
 }
 
+/* sends an error packet to the client and logs an error including a system error message */ 
 void ddnsd_send_err_sys(uint32 uid, char *errstr)
 {
   stralloc err = {0};
@@ -172,6 +182,8 @@ void ddnsd_send_err_sys(uint32 uid, char *errstr)
   ddnsd_send_err(uid, DDNS_T_ESERVINT, err.s);
 }
 
+/* dump a packet to stderr for debugging. 
+   XXX: should be removed */
 void dump_packet(struct ddnsrequest *p, char *info)
 {
   char strnum[FMT_ULONG];
@@ -183,17 +195,54 @@ void dump_packet(struct ddnsrequest *p, char *info)
   buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->type));
   buffer_puts(buffer_2, " magic=0x");
   buffer_put(buffer_2, strnum, fmt_xint(strnum, p->magic));
-  buffer_puts(buffer_2, " ip=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->ip4));
+  buffer_puts(buffer_2, " ip4=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip4[0]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip4[1]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip4[2]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip4[3]));
+  buffer_puts(buffer_2, " ip6=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[0]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[1]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[2]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[3]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[4]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[5]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[6]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[7]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[8]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[9]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[10]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[11]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[12]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[13]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[14]));
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[15]));
   buffer_puts(buffer_2, " rnd1=0x");
   buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random1));
   buffer_puts(buffer_2, " rnd2=0x");
   buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random2));
+  buffer_puts(buffer_2, "\n   r1=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->reserved1));
+  buffer_puts(buffer_2, " r2=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->reserved2));
+  buffer_puts(buffer_2, " loc_size=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->loc_size));
+  buffer_puts(buffer_2, " loc_hpre=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->loc_hpre));
+  buffer_puts(buffer_2, " loc_vpre=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->loc_vpre));
+  buffer_puts(buffer_2, " loc_lat=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->loc_lat));
+  buffer_puts(buffer_2, " loc_long=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->loc_long));
+  buffer_puts(buffer_2, " loc_alt=0x");
+  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->loc_alt));
   buffer_puts(buffer_2, "\n");
   buffer_flush(buffer_2);
   
 }
 
+/* find a user in the cdb */
 /* returns 1 when found, 0 when unknown user */
 int ddnsd_find_user(uint32 uid, stralloc *sa)
 {
@@ -238,7 +287,7 @@ int ddnsd_find_user(uint32 uid, stralloc *sa)
 }
 
 
-/* read, decode and decrypt packet */
+/* read, decrypt and decode packet */
 int ddnsd_recive(struct ddnsrequest *p)
 {
   int r;
@@ -246,44 +295,54 @@ int ddnsd_recive(struct ddnsrequest *p)
   struct ddnsrequest ptmp;
   stralloc data = {0};
   
-  r = timeoutread(60, 0, &ptmp, sizeof(struct ddnsrequest));
+  /* read using a 120 second timeout */
+  r = timeoutread(120, 0, &ptmp, sizeof(struct ddnsrequest));
   if(r != 68) 
-    ddnsd_send_err(p->uid, DDNS_T_EPROTERROR, "wrong packetsize/timeout");
+    /* 2 * 256 bits + 32 bits userid = 68 bytes */
+    ddnsd_send_err(p->uid, DDNS_T_EPROTERROR, "wrong packetsize or timeout");
 
+  /* bring the uid in host byteorder */
   uint32_unpack((char*) &ptmp.uid, &p->uid);
   
   if(ddnsd_find_user(p->uid, &data))
     {
       key = data.s;
+      // default TTL and username from cdb
       uint32_unpack(&data.s[32], &ttl);
       if(!stralloc_copyb(&username, &data.s[36], data.len-36)) nomem();
       
       /* initialize rijndael with 256 bit blocksize and 256 bit keysize */
       rijndaelKeySched(8, 8, key);
       
-      /* decrypt with rijndael */
+      /* decrypt two blocks ( = 512 bits = one ddnsd request) with rijndael */
       rijndaelDecrypt((char *) &ptmp.type);
       rijndaelDecrypt((char *) &ptmp.type + 32);
       
+      /* bring numbers in host byteorder */
       uint16_unpack((char*) &ptmp.type, &p->type);
       uint32_unpack((char*) &ptmp.magic, &p->magic);
-      uint32_unpack((char*) &ptmp.ip4, &p->ip4);
+      byte_copy(&p->ip4[0], 4, &ptmp.ip4[0]);
+      byte_copy(&p->ip6[0], 16, &ptmp.ip6[0]);
       taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
       uint32_unpack((char*) &ptmp.loc_lat, &p->loc_lat);
       uint32_unpack((char*) &ptmp.loc_long, &p->loc_long);
       uint32_unpack((char*) &ptmp.loc_alt, &p->loc_alt);
+      /* this are bytes which don't net conversation */
       ptmp.loc_size = p->loc_size;
       ptmp.loc_vpre = p->loc_hpre;
       ptmp.loc_hpre = p->loc_vpre;
       
+      /* check for the right magic */
       if(p->magic != DDNS_MAGIC)
+	/* propably decryption didn't suceed */
 	ddnsd_send_err(p->uid, DDNS_T_EWRONGMAGIC, "wrong magic");
       
+      /* everything is fine */
       return p->type;
     }
   else
     ddnsd_send_err(0, DDNS_T_EUNKNOWNUID, "unknown user");
-  
+  /* error condition */
   return 0;
 }
 
@@ -311,7 +370,7 @@ void ddnsd_setentry( struct ddnsrequest *p)
   stralloc finname = {0};
   char outbuf[BUFFER_OUTSIZE];
   char strnum[FMT_ULONG];
-  char strip[IP4_FMT];
+  char strip[IP6_FMT];
   buffer ssout;
   
   /* create a temporary name */
@@ -351,13 +410,20 @@ void ddnsd_setentry( struct ddnsrequest *p)
   
   /* write data to file */
   buffer_init(&ssout,write, fd, outbuf, sizeof outbuf);
-  buffer_puts(&ssout, "=");
+  /* ip4 */
+  buffer_puts(&ssout, "=,");
   buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip4));
-  buffer_puts(&ssout, ":");
+  buffer_puts(&ssout, ",0x");
   buffer_put(&ssout, strnum, fmt_xlong(strnum, p->uid));
   buffer_puts(&ssout, "\n");
+  /* ip6 */
+  buffer_puts(&ssout, "6,");
+  buffer_put(&ssout, strip, ip6_fmt(strip, (char *) &p->ip6));
+  buffer_puts(&ssout, ",0x");
+  buffer_put(&ssout, strnum, fmt_xlong(strnum, p->uid));
+  buffer_puts(&ssout, "\n");
+  /* XXX: LOC is missing */
   buffer_flush(&ssout); 
-  /* XXX: LOC and IPv6 are missing */
   
   close(fd);
   
@@ -369,6 +435,7 @@ void ddnsd_setentry( struct ddnsrequest *p)
 	/* else: everything is fine, the File doesn't exist */
     }
   else
+    // XXX: this error can happpen with ither conditions too - fixme
     ddnsd_send_err(p->uid, DDNS_T_EALLREADYUSED, "allready registered");
 
   /* move tmp file to final file */
@@ -391,19 +458,28 @@ void ddnsd_setentry( struct ddnsrequest *p)
       ddnsd_send_err_sys(p->uid, err.s);
     }
   
-  ddnsd_log(p->uid, "setting entry");
+  /* log this transaction */
+  ddnsd_log(p->uid, "setting entry ");
+  buffer_puts(buffer_2, "to ");
+  buffer_put(buffer_2, strip, ip4_fmt(strip, (char *) &p->ip4));
+  buffer_puts(buffer_2, "/");
+  buffer_put(buffer_2, strip, ip6_fmt(strip, (char *) &p->ip6));
+  buffer_puts(buffer_2, " ttl ");
+  buffer_put(buffer_2, strnum, fmt_ulong(strnum, ttl));
+  buffer_putsflush(buffer_2, "\n");
 
   /* construct the answer Packet */
   r.type = DDNS_T_ACK;
   r.uid = p->uid;
   /* there should be some more intelligence in setting leasetime */
-  r.leasetime.x = ttl;	 
+  r.leasetime = ttl;
   ddnsd_send(&r);  
 }
 
 /* handle a renewentry request by updating th ctime of the file */
 void ddnsd_renewentry( struct ddnsrequest *p)
 {
+  char strnum[FMT_ULONG];
   struct stat st = {0};
   struct utimbuf ut;
   struct ddnsreply r;
@@ -429,11 +505,14 @@ void ddnsd_renewentry( struct ddnsrequest *p)
     ddnsd_send_err_sys(p->uid, tmpname.s);
     
   ddnsd_log(p->uid, "renewing entry");
+  buffer_puts(buffer_2, " ttl ");
+  buffer_put(buffer_2, strnum, fmt_ulong(strnum, ttl));
+  buffer_putsflush(buffer_2, "\n");
 
   /* construct the answer Packet */
   r.type = DDNS_T_ACK;
   r.uid = p->uid;
-  r.leasetime.x = ttl;
+  r.leasetime = ttl;
   ddnsd_send(&r);  
 }
 
@@ -455,12 +534,12 @@ void ddnsd_killentry( struct ddnsrequest *p)
 	ddnsd_send_err_sys(p->uid, tmpname.s);
     }
   
-  ddnsd_log(p->uid, "killing entry");
+  ddnsd_log(p->uid, "killing entry\n");
   
   /* construct the answer Packet */
   r.type = DDNS_T_ACK;
   r.uid = p->uid;
-  r.leasetime.x = (uint64) (randomMT() & (uint64)((uint64)randomMT() << 32));
+  r.leasetime = 0;
   ddnsd_send(&r);  
 }
 
@@ -508,7 +587,7 @@ int main(int argc, char **argv)
   /* read one ddns packet from stdin which should be 
      connected to the tcpstream */
   ddnsd_recive(&p);
-  
+      
   switch(p.type)
     {
     case DDNS_T_SETENTRY:

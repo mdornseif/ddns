@@ -1,8 +1,15 @@
-/* $Id: ddnsc.c,v 1.8 2000/05/02 22:53:49 drt Exp $
+/* $Id: ddnsc.c,v 1.9 2000/07/07 13:32:47 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.9  2000/07/07 13:32:47  drt
+ * ddnsd and ddnsc now basically work as they should and are in
+ * a usable state. The protocol is changed a little bit to lessen
+ * problems with alignmed and so on.
+ * Tested on IA32 and PPC.
+ * Both are still missing support for LOC.
+ *
  * Revision 1.8  2000/05/02 22:53:49  drt
  * Changed keysize to 256 bits
  * cleand code a bit and removed a lot of cruft
@@ -55,7 +62,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsc.c,v 1.8 2000/05/02 22:53:49 drt Exp $";
+static char rcsid[] = "$Id: ddnsc.c,v 1.9 2000/07/07 13:32:47 drt Exp $";
 
 #define FATAL "ddnsc: "
 
@@ -68,7 +75,7 @@ char netreadspace[128];
 
 void die_usage(void)
 {
-  strerr_die1x(111, "usage: ddnsc uid ip (s|r|k)");
+  strerr_die1x(111, "usage: ddnsc uid myip (s|r|k)");
 }
 
 int saferead(int fd,char *buf,unsigned int len)
@@ -103,22 +110,6 @@ buffer netread = BUFFER_INIT(saferead, 6, netreadspace, sizeof netreadspace);
 char netwritespace[128];
 buffer netwrite = BUFFER_INIT(safewrite, 7, netwritespace, sizeof netwritespace);
 
-void dump_packet(struct ddnsreply *p, char *info)
-{
-  char strnum[FMT_ULONG];
-  
-  buffer_puts(buffer_2, info);
-  buffer_puts(buffer_2, ": uid=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->uid));
-  buffer_puts(buffer_2, " type=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->type));
-  buffer_puts(buffer_2, " magic=0x");
-  buffer_put(buffer_2, strnum, fmt_xint(strnum, p->magic));
-  buffer_puts(buffer_2, " rnd=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random1));
-  buffer_puts(buffer_2, "\n");
-  buffer_flush(buffer_2);  
-}
 
 /* read, decode and decrypt packet */
 int ddnsc_recive(struct ddnsreply *p)
@@ -143,16 +134,13 @@ int ddnsc_recive(struct ddnsreply *p)
   uint16_unpack((char*) &ptmp.type, &p->type);
   uint32_unpack((char*) &ptmp.magic, &p->magic);
   taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
-  tai_unpack((char*) &ptmp.leasetime, &p->leasetime);
+  uint32_unpack((char*) &ptmp.leasetime, &p->leasetime);
 
   if(p->uid == 0)
     strerr_die1x(100, "user unknown to server"); 
 
   if(p->magic != DDNS_MAGIC)
-    {
-      dump_packet(p, "achtung baby");
-      strerr_die1x(100, "wrong magic");
-    }
+    strerr_die1x(100, "wrong magic");
   
   return p->type;
 }
@@ -170,8 +158,8 @@ static void ddnsc_send(struct ddnsrequest *p)
   taia_pack((char *) &ptmp.timestamp, &t);
   uint32_pack((char*) &ptmp.uid, p->uid);
   uint32_pack((char*) &ptmp.magic, p->magic);
-  uint32_pack((char*) &ptmp.ip4, p->ip4);
-  byte_copy(&ptmp.ip6, 16, p->ip6);
+  byte_copy(&ptmp.ip4[0], 4, p->ip4);
+  byte_copy(&ptmp.ip6[0], 16, p->ip6);
   uint16_pack((char*) &ptmp.type, p->type);
   uint32_pack((char*) &ptmp.loc_lat, p->loc_lat);
   uint32_pack((char*) &ptmp.loc_long, p->loc_long);
@@ -185,12 +173,13 @@ static void ddnsc_send(struct ddnsrequest *p)
   ptmp.reserved1 = randomMT() & 0xff;;
   ptmp.reserved2 = randomMT() & 0xffff;
 
+
   /* initialize rijndael with 256 bit blocksize and 256 bit keysize */
   rijndaelKeySched(8, 8, key.s);
     
   /* Encrypt with rijndael */
   rijndaelEncrypt((char *) &ptmp.type);
-  rijndaelEncrypt((char *) &ptmp.type + 32);
+  rijndaelEncrypt((char *) &ptmp.type + 32);  
 
   buffer_put(&netwrite, (char *) &ptmp, sizeof(struct ddnsrequest));
   buffer_flush(&netwrite); 
@@ -240,11 +229,20 @@ int main(int argc, char **argv)
 
   stralloc_copys(&key, x);
   txtparse(&key);
-  pad(&key, 16);
+  pad(&key, 32);
 
   p.uid = uid;
-  byte_copy(&p.ip4, 4, ip);
+  byte_copy(&p.ip4[0], 4, ip);
 
+  // XXX: put something useful here
+  byte_copy(&p.ip6[0], 16, "1234567890abcdef");
+  p.loc_lat = 70;
+  p.loc_long = 60;
+  p.loc_alt = 70;
+  p.loc_size = 60;
+  p.loc_hpre = 70;
+  p.loc_vpre = 60;
+  
   /* send request */
   ddnsc_send(&p);
 
@@ -254,8 +252,8 @@ int main(int argc, char **argv)
   switch(r.type)
     {
     case DDNS_T_ACK: 
-      buffer_puts(buffer_1, "ACK: ");
-      buffer_put(buffer_1, strnum, fmt_ulong(strnum, r.leasetime.x));
+      buffer_puts(buffer_1, "ACK: leasetime ");
+      buffer_put(buffer_1, strnum, fmt_ulong(strnum, r.leasetime));
       buffer_puts(buffer_1, "\n");
       break;
     case DDNS_T_NAK: 
@@ -279,11 +277,14 @@ int main(int argc, char **argv)
     case DDNS_T_EUNKNOWNUID: 
       buffer_puts(buffer_1, "EID: uid is unknown to the server\n"); 
       break;  
+    case DDNS_T_ENOENTRYUSED:
+	buffer_puts(buffer_1, "ENE: client requsted to renew/kill something which is not set\n");
+	break;
     case DDNS_T_EUNSUPPTYPE: 
       buffer_puts(buffer_1, "EUS: \n"); 
       break;  
     default:
-      dump_packet(&r, "unknown packet");
+      strerr_die1x(100, "unknown packet");
     }
   buffer_flush(buffer_1);  
   

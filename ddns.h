@@ -1,6 +1,13 @@
-/* $Id: ddns.h,v 1.6 2000/05/02 22:50:19 drt Exp $
+/* $Id: ddns.h,v 1.7 2000/07/07 13:32:47 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.7  2000/07/07 13:32:47  drt
+ * ddnsd and ddnsc now basically work as they should and are in
+ * a usable state. The protocol is changed a little bit to lessen
+ * problems with alignmed and so on.
+ * Tested on IA32 and PPC.
+ * Both are still missing support for LOC.
+ *
  * Revision 1.6  2000/05/02 22:50:19  drt
  * Renumbered DDNS_T
  *
@@ -52,8 +59,7 @@ struct ddnsrequest {
   uint16 type;                             //  16
   uint16 random1;                          //  32
   uint32 magic;                            //  64
-  struct taia timestamp;                   // 192
-  uint32 ip4;                              // 224
+  unsigned char ip4[4];                    // 224
   unsigned char ip6[16];                   // 352
   unsigned char reserved1;                 // 360         
   unsigned char loc_size;                  // 368
@@ -64,6 +70,8 @@ struct ddnsrequest {
   uint32 loc_alt;                          // 480
   uint16 random2;                          // 496
   uint16 reserved2;                        // 512
+   /* taia and alignment of compilers tend to mix up very much, so it is moved to the end */
+  struct taia timestamp;                   // 192
 };
 
 struct ddnsreply {
@@ -71,12 +79,12 @@ struct ddnsreply {
   uint16 type;                             //  16
   uint16 random1;                          //  32
   uint32 magic;                            //  64
-  struct taia timestamp;                   // 192
-  struct tai leasetime;                    // 256
+  uint32 leasetime;                        // 224
+  uint32 reserved[9];                      // 512
   /* here we will add a "you must have lost a packet"-field
      for udp as a transport
      uint32 already_set;
   */
-  uint32 reserved[8];                      // 512
-};
+  struct taia timestamp;                   // 192
+ };
 
