@@ -1,5 +1,5 @@
-/* $Id: ddns_pack.h,v 1.1 2000/07/29 21:12:50 drt Exp $
- *  -- drt@ailis.de
+/* $Id: ddns_pack.h,v 1.2 2000/11/21 19:28:22 drt Exp $
+ *  -- drt@un.bewaff.net
  *
  * converts ddnsrequest and ddnsreply to machine 
  * independent bytestreams and back

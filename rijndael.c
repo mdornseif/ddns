@@ -15,11 +15,14 @@
    Full implementation. 
    Endian indifferent.
    
-   adopted for didentd 000410 by drt@ailis.de
+   adopted for didentd 000410 by drt@un.bewaff.net
 
-   $Id: rijndael.c,v 1.1 2000/04/30 15:59:26 drt Exp $
+   $Id: rijndael.c,v 1.2 2000/11/21 19:28:23 drt Exp $
 
    $Log: rijndael.c,v $
+   Revision 1.2  2000/11/21 19:28:23  drt
+   Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+
    Revision 1.1  2000/04/30 15:59:26  drt
    cleand up usage of djb stuff
 

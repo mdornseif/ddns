@@ -1,9 +1,12 @@
-/* $Id: ddnsd_killentry.c,v 1.3 2000/10/17 21:59:35 drt Exp $
- *  -- drt@ailis.de - http://rc23.cx/
+/* $Id: ddnsd_killentry.c,v 1.4 2000/11/21 19:28:22 drt Exp $
+ *  -- drt@un.bewaff.net - http://rc23.cx/
  *
  * (K)allisti 2000 a.D. - all rights reversed
  *
  * $Log: ddnsd_killentry.c,v $
+ * Revision 1.4  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.3  2000/10/17 21:59:35  drt
  * *** empty log message ***
  *
@@ -27,7 +30,7 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd_killentry.c,v 1.3 2000/10/17 21:59:35 drt Exp $";
+static char rcsid[] = "$Id: ddnsd_killentry.c,v 1.4 2000/11/21 19:28:22 drt Exp $";
 
 
 /* the user requested to delete his entry from the dns */

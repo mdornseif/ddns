@@ -1,5 +1,5 @@
-/* $Id: ddns_pack.c,v 1.1 2000/07/29 21:12:50 drt Exp $
- *  -- drt@ailis.de
+/* $Id: ddns_pack.c,v 1.2 2000/11/21 19:28:22 drt Exp $
+ *  -- drt@un.bewaff.net
  *
  * converts ddnsrequest and ddnsreply to machine 
  * independent bytestreams and back
@@ -9,6 +9,9 @@
  * You might find more Information at http://rc23.cx/
  *
  * $Log: ddns_pack.c,v $
+ * Revision 1.2  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.1  2000/07/29 21:12:50  drt
  * initial revision
  *
@@ -24,7 +27,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns_pack.c,v 1.1 2000/07/29 21:12:50 drt Exp $";
+static char rcsid[] = "$Id: ddns_pack.c,v 1.2 2000/11/21 19:28:22 drt Exp $";
 
 static void die_nomem()
 {

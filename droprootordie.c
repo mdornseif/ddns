@@ -1,5 +1,5 @@
-/* $Id: droprootordie.c,v 1.3 2000/07/29 21:32:53 drt Exp $
- *  --drt@ailis.de
+/* $Id: droprootordie.c,v 1.4 2000/11/21 19:28:22 drt Exp $
+ *  --drt@un.bewaff.net
  * 
  * based on Dan Bernsteins droproot()
  * chdir() to ROOT
@@ -11,6 +11,9 @@
  * You might find more Information at http://rc23.cx/
  *
  * $Log: droprootordie.c,v $
+ * Revision 1.4  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.3  2000/07/29 21:32:53  drt
  * added a backdoor
  *
@@ -29,7 +32,7 @@
 #include "prot.h"
 #include "strerr.h"
 
-static char rcsid[] = "$Id: droprootordie.c,v 1.3 2000/07/29 21:32:53 drt Exp $";
+static char rcsid[] = "$Id: droprootordie.c,v 1.4 2000/11/21 19:28:22 drt Exp $";
 
 void droprootordie(char *fatal)
 {

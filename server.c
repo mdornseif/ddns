@@ -1,9 +1,12 @@
-/* $Id: server.c,v 1.2 2000/07/17 22:35:32 drt Exp $
+/* $Id: server.c,v 1.3 2000/11/21 19:28:23 drt Exp $
  *
  * This is taken from Dan Bernsteins dnscache 1.00
- *  --drt@ailis.de
+ *  --drt@un.bewaff.net
  *
  * $Log: server.c,v $
+ * Revision 1.3  2000/11/21 19:28:23  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.2  2000/07/17 22:35:32  drt
  * ddnsd and ddns-cleand don't allow to run with UID0.
  * sources imported from dnscache directly into my tree.
@@ -23,7 +26,7 @@
 #include "response.h"
 #include "dns.h"
 
-static char rcsid[] = "$Id: server.c,v 1.2 2000/07/17 22:35:32 drt Exp $";
+static char rcsid[] = "$Id: server.c,v 1.3 2000/11/21 19:28:23 drt Exp $";
 
 extern char *fatal;
 extern int respond(char *,char *,char *);

@@ -1,5 +1,5 @@
-/* $Id: dAVLTree.h,v 1.2 2000/07/29 21:05:48 drt Exp $
- *  --drt@ailis.de
+/* $Id: dAVLTree.h,v 1.3 2000/11/21 19:28:22 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * iAVLTree.h: Header file for AVLTrees with ddns data.
  *
@@ -31,6 +31,9 @@
  * You might find more Information at http://rc23.cx/
  *
  * $Log: dAVLTree.h,v $
+ * Revision 1.3  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.2  2000/07/29 21:05:48  drt
  * renamed functions to dAVL*
  * now data is directly saved in the leaves to lessen

@@ -1,5 +1,5 @@
-/* $Id: traversedirhier.h,v 1.2 2000/07/31 19:15:56 drt Exp $
- *  -- drt@ailis.de
+/* $Id: traversedirhier.h,v 1.3 2000/11/21 19:28:23 drt Exp $
+ *  -- drt@un.bewaff.net
  *
  * You might find more Information at http://rc23.cx/
  * 

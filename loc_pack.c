@@ -1,7 +1,10 @@
-/* $Id: loc_pack.c,v 1.1 2000/07/31 19:03:18 drt Exp $
- *  -- drt @ailis.de
+/* $Id: loc_pack.c,v 1.2 2000/11/21 19:28:23 drt Exp $
+ *  -- drt@un.bewaff.net
  *
  * $Log: loc_pack.c,v $
+ * Revision 1.2  2000/11/21 19:28:23  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.1  2000/07/31 19:03:18  drt
  * initial revision
  *
@@ -12,7 +15,7 @@
 
 #include "loc.h"
 
-static char rcsid[] = "$Id: loc_pack.c,v 1.1 2000/07/31 19:03:18 drt Exp $";
+static char rcsid[] = "$Id: loc_pack.c,v 1.2 2000/11/21 19:28:23 drt Exp $";
 
 /* converts a struct loc_s to a 16 byte v0 RfC 1876 RR  */
 void loc_pack_big(char *b, struct loc_s *loc)
@@ -37,7 +40,7 @@ void loc_unpack_big(char *tb, struct loc_s *loc)
   /* Version 0 */
   if(tb[0] != 0)
     // arrrgrrr
-    strerr_die1x(111, "heyho! new DNS LOC version (v != 0)");
+    strerr_die1x(111, "heyho! new DNS LOC version (v != 0) - is a new RfC out there?");
 
   loc->size = tb[1];
   /* XXX: something is mixed up here, fixme, use loc_pack */

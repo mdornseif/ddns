@@ -1,5 +1,5 @@
-/* $Id: ddnsd_log.c,v 1.2 2000/10/06 13:52:01 drt Exp $
- *   --drt@ailis.de
+/* $Id: ddnsd_log.c,v 1.3 2000/11/21 19:28:22 drt Exp $
+ *   --drt@un.bewaff.net
  *
  * logging for ddnsd
  * 
@@ -8,6 +8,9 @@
  * you might find more Information at http://rc23.cx/
  * 
  * $Log: ddnsd_log.c,v $
+ * Revision 1.3  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.2  2000/10/06 13:52:01  drt
  * logging of pid
  *
@@ -26,7 +29,7 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd_log.c,v 1.2 2000/10/06 13:52:01 drt Exp $";
+static char rcsid[] = "$Id: ddnsd_log.c,v 1.3 2000/11/21 19:28:22 drt Exp $";
 
 extern void die_nomem(void);
 
@@ -64,6 +67,7 @@ void ddnsd_log(uint32 uid, char *str)
 
   /* Do logging */
   buffer_puts(buffer_2, "ddnsd[");
+  buffer_put(buffer_2, strnum, fmt_ulong(strnum, getpid()));
   buffer_puts(buffer_2, "]: ");
   buffer_puts(buffer_2, remotehost);
   buffer_puts(buffer_2, " [");

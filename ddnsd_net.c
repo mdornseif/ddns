@@ -1,5 +1,5 @@
-/* $Id: ddnsd_net.c,v 1.1 2000/07/31 19:03:17 drt Exp $
- *   --drt@ailis.de
+/* $Id: ddnsd_net.c,v 1.2 2000/11/21 19:28:22 drt Exp $
+ *   --drt@un.bewaff.net
  *
  * network communications for ddnsd
  * 
@@ -8,6 +8,9 @@
  * you might find more Information at http://rc23.cx/
  * 
  * $Log: ddnsd_net.c,v $
+ * Revision 1.2  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.1  2000/07/31 19:03:17  drt
  * initial revision
  *
@@ -35,7 +38,7 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd_net.c,v 1.1 2000/07/31 19:03:17 drt Exp $";
+static char rcsid[] = "$Id: ddnsd_net.c,v 1.2 2000/11/21 19:28:22 drt Exp $";
 
 /* fill p with random, timestamp, magic, encrypt it and send it */
 void ddnsd_send(struct ddnsreply *p)

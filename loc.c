@@ -1,5 +1,5 @@
-/* $Id: loc.c,v 1.5 2000/07/29 21:35:17 drt Exp $
- *  -- drt@ailis.de
+/* $Id: loc.c,v 1.6 2000/11/21 19:28:23 drt Exp $
+ *  -- drt@un.bewaff.net
  * 
  * handling of LOC data 
  * see:
@@ -14,6 +14,9 @@
  * seconds - how baroqe!
  * 
  * $Log: loc.c,v $
+ * Revision 1.6  2000/11/21 19:28:23  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.5  2000/07/29 21:35:17  drt
  * removed snprintf()
  *
@@ -37,7 +40,7 @@
  *
  */
 
-static char rcsid[] = "$Id: loc.c,v 1.5 2000/07/29 21:35:17 drt Exp $";
+static char rcsid[] = "$Id: loc.c,v 1.6 2000/11/21 19:28:23 drt Exp $";
 
 #include <sys/types.h>
 #include <stdio.h>

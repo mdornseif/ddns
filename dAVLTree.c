@@ -1,5 +1,5 @@
-/* $Id: dAVLTree.c,v 1.3 2000/07/31 19:15:56 drt Exp $
- *  --drt@ailis.de
+/* $Id: dAVLTree.c,v 1.4 2000/11/21 19:28:22 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * Source code for the AVLTree library (ddns version).
  *
@@ -31,6 +31,9 @@
  * You might find more Information at http://rc23.cx/
  * 
  * $Log: dAVLTree.c,v $
+ * Revision 1.4  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.3  2000/07/31 19:15:56  drt
  * ddns-file(5) format changed
  * a lot of restructuring

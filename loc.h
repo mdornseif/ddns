@@ -1,13 +1,16 @@
-/* $Id: loc.h,v 1.4 2000/07/31 19:15:56 drt Exp $
+/* $Id: loc.h,v 1.5 2000/11/21 19:28:23 drt Exp $
  *
  * header for DNS LOC handling routines
- *  -- drt@ailis.de
+ *  -- drt@un.bewaff.net
  *
  * (K)opyright is Myth
  * 
  * You might find more information at http://rc23.cx/
  *
  * $Log: loc.h,v $
+ * Revision 1.5  2000/11/21 19:28:23  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.4  2000/07/31 19:15:56  drt
  * ddns-file(5) format changed
  * a lot of restructuring

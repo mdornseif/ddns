@@ -1,5 +1,5 @@
-/* $Id: ddns_parseline.c,v 1.2 2000/07/31 19:15:56 drt Exp $
- *  --drt@ailis.de
+/* $Id: ddns_parseline.c,v 1.3 2000/11/21 19:28:22 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * parse ddnsd-pipe(5) lines obtained by creating a fifo in tracedir/. 
  *
@@ -8,6 +8,9 @@
  * You might find more Information at http://rc23.cx/
  *
  * $Log: ddns_parseline.c,v $
+ * Revision 1.3  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.2  2000/07/31 19:15:56  drt
  * ddns-file(5) format changed
  * a lot of restructuring
@@ -30,9 +33,11 @@
 #include "ddns.h"
 #include "loc.h"
 
-static char rcsid[] = "$Id: ddns_parseline.c,v 1.2 2000/07/31 19:15:56 drt Exp $";
+static char rcsid[] = "$Id: ddns_parseline.c,v 1.3 2000/11/21 19:28:22 drt Exp $";
  
 #define NUMFIELDS 10
+
+extern void die_nomem(void);
 
 void ddns_parseline(char *s, uint32 *uid, char *ip4, char *ip6, char *loc)
 {

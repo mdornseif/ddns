@@ -1,4 +1,4 @@
-// $Id: mt19937.c,v 1.1 2000/04/30 15:59:26 drt Exp $
+// $Id: mt19937.c,v 1.2 2000/11/21 19:28:23 drt Exp $
 //
 // This is the ``Mersenne Twister'' random number generator MT19937, which
 // generates pseudorandom integers uniformly distributed in 0..(2^32 - 1)
@@ -13,7 +13,7 @@
 // (i.e., 46.5% of original time), so speed is now about 12.5 million random
 // number generations per second on this machine.
 //
-// D. R. Tzeck <drt@ailis.de> added some function to generate blocks
+// D. R. Tzeck <drt@un.bewaff.net> added some function to generate blocks
 // of random data.  Tests indivate that this ist about 55% faster on a
 // PII for 1024 byte blocks than the inline function randomMT(void). I
 // guess blockMT could be improved further for 64Bit CPUs.
@@ -50,6 +50,9 @@
 // It would be nice to CC: <Cokus@math.washington.edu> when you write.
 //
 // $Log: mt19937.c,v $
+// Revision 1.2  2000/11/21 19:28:23  drt
+// Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+//
 // Revision 1.1  2000/04/30 15:59:26  drt
 // cleand up usage of djb stuff
 //

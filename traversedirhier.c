@@ -1,5 +1,5 @@
-/* $Id: traversedirhier.c,v 1.2 2000/10/06 13:48:35 drt Exp $
- *  -- drt@ailis.de
+/* $Id: traversedirhier.c,v 1.3 2000/11/21 19:28:23 drt Exp $
+ *  -- drt@un.bewaff.net
  *
  * Traverse a directory hierachy
  * 
@@ -8,6 +8,9 @@
  * You might find more Information at http://rc23.cx/
  * 
  * $Log: traversedirhier.c,v $
+ * Revision 1.3  2000/11/21 19:28:23  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.2  2000/10/06 13:48:35  drt
  * cleanups
  *
@@ -28,7 +31,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: traversedirhier.c,v 1.2 2000/10/06 13:48:35 drt Exp $";
+static char rcsid[] = "$Id: traversedirhier.c,v 1.3 2000/11/21 19:28:23 drt Exp $";
 
 int traversedirhier(char *dirname, int(*dofile)(char *file, time_t ctime))
 {

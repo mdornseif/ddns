@@ -1,10 +1,13 @@
 /* rijndael.h 
  *
- * drt@ailis.de
+ * drt@un.bewaff.net
  *
  * $id$ 
  *
  * $Log: rijndael.h,v $
+ * Revision 1.2  2000/11/21 19:28:23  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.1  2000/04/30 15:59:26  drt
  * cleand up usage of djb stuff
  *

@@ -1,9 +1,12 @@
-/* $Id: dd.c,v 1.1 2000/07/17 22:35:32 drt Exp $
+/* $Id: dd.c,v 1.2 2000/11/21 19:28:22 drt Exp $
  *
  * This is taken from Dan Bernsteins dnscache 1.00
- *  --drt@ailis.de
+ *  --drt@un.bewaff.net
  *
  * $Log: dd.c,v $
+ * Revision 1.2  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.1  2000/07/17 22:35:32  drt
  * ddnsd and ddns-cleand don't allow to run with UID0.
  * sources imported from dnscache directly into my tree.
@@ -13,7 +16,7 @@
 #include "dns.h"
 #include "dd.h"
 
-static char rcsid[] = "$Id: dd.c,v 1.1 2000/07/17 22:35:32 drt Exp $";
+static char rcsid[] = "$Id: dd.c,v 1.2 2000/11/21 19:28:22 drt Exp $";
 
 int dd(char *q,char *base,char ip[4])
 {

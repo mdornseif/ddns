@@ -1,5 +1,5 @@
-/* $Id: write_fifodir.c,v 1.1 2000/07/31 19:03:18 drt Exp $
- * -- drt@ailis.de
+/* $Id: write_fifodir.c,v 1.2 2000/11/21 19:28:23 drt Exp $
+ * -- drt@un.bewaff.net
  *
  * write a stralloc so all fifos in a directory for ddnsd
  * using a 5 second timeout for each fifo
@@ -7,6 +7,9 @@
  * Information wants to be free
  *
  * $Log: write_fifodir.c,v $
+ * Revision 1.2  2000/11/21 19:28:23  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.1  2000/07/31 19:03:18  drt
  * initial revision
  *
@@ -24,7 +27,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: write_fifodir.c,v 1.1 2000/07/31 19:03:18 drt Exp $";
+static char rcsid[] = "$Id: write_fifodir.c,v 1.2 2000/11/21 19:28:23 drt Exp $";
 
 void openandwrite(char *filename, stralloc *sa)
 {

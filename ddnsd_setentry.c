@@ -1,9 +1,12 @@
-/* $Id: ddnsd_setentry.c,v 1.2 2000/10/06 22:03:15 drt Exp $
- *  -- drt@ailis.de - http://rc23.cx/
+/* $Id: ddnsd_setentry.c,v 1.3 2000/11/21 19:28:22 drt Exp $
+ *  -- drt@un.bewaff.net - http://rc23.cx/
  *
  * (K)allisti 2000 a.D. - all rights reversed
  *
  * $Log: ddnsd_setentry.c,v $
+ * Revision 1.3  2000/11/21 19:28:22  drt
+ * Changed Email Address from drt@ailis.de to drt@un.bewaff.net
+ *
  * Revision 1.2  2000/10/06 22:03:15  drt
  * Library reorganisation
  *
@@ -37,7 +40,7 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd_setentry.c,v 1.2 2000/10/06 22:03:15 drt Exp $";
+static char rcsid[] = "$Id: ddnsd_setentry.c,v 1.3 2000/11/21 19:28:22 drt Exp $";
 
 /* handle a setentryrequest */
 void ddnsd_setentry(struct ddnsrequest *p, uint32 *ttl, stralloc *username)
