@@ -1,0 +1,73 @@
+.TH filedns-conf 8
+.SH NAME
+filedns-conf \- set up filedns for use with supervise/svscan
+.SH SYNOPSIS
+.B filedns-conf
+.I acct logacct D ddnsddir ip 
+.SH DESCRIPTION
+.B filedns-conf
+creates a service directory 
+.I D 
+that runs 
+.BR filedns (8) 
+on Address 
+.BR ip 
+at port 53 udp.
+The name 
+.I D 
+must start with a slash and must not contain any special characters. 
+.P
+You can run the service under 
+.BR svscan(8)
+by creating a symbolic link in the 
+.I /service 
+directory to
+.IR D .
+.P
+The service will start within five seconds, and will be restarted 
+upon reboot. You can use svc to control the service. 
+.P
+.B filedns-conf
+arranges  
+.BR filedns (8) 
+to chroot to 
+.I ddnsddir
+and to run under the uid and gid of 
+.IR acct .
+.I ddnsddir
+is the directory hierachy ddns uses to output dns data,
+typically /service/ddnsd/root/dot/. 
+.P
+.I acct
+should be in the same group as the account used by
+.IR ddnsd (8) 
+so 
+.BR filedns (8) 
+can read files created by 
+.IR ddnsd (8) 
+using a permission of 0640.
+.P
+.B filedns-conf
+creates an automatically rotated log directory in 
+.IR D /log/main. 
+The logs are owned by 
+.IR logacct . 
+The corrosponding 
+.BR multilog (8) 
+processes will run under the uid and gid of 
+.IR logacct . 
+The name
+.I logacct 
+must not contain any special characters. 
+.SH AUTHOR
+Doobee R. Tzeck <drt@ailis.de> - http://rc23.cx/
+.SH SEE ALSO
+filedns(8),
+ddnsd-conf(8),
+ddns-cleand-conf(8),
+supervise(8),
+svc(8),
+svscan(8),
+multilog(8),
+tai64nlocal(8),
+envuidgid(8)

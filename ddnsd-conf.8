@@ -1,0 +1,90 @@
+.TH ddnsd-conf 8
+.SH NAME
+dsnsd-conf \- set up ddnsd for use with supervise/svscan
+.SH SYNOPSIS
+.B ddnsd-conf
+.I acct logacct D ip port zone
+.SH DESCRIPTION
+.B ddnsd-conf
+creates a service directory 
+.I D 
+that runs 
+.BR ddnsd (8) 
+under 
+.BR tcpserver (1).
+The name 
+.I D 
+must start with a slash and must not contain any special characters. 
+.P
+You can run the service under 
+.BR svscan(8)
+by creating a symbolic link in the 
+.I /service 
+directory to
+.IR D .
+.P
+The service will start within five seconds, and will be restarted 
+upon reboot. You can use svc to control the service. 
+.P
+.B ddnsd-conf
+arranges for 
+.BR tcpserver (1)
+to listen for TCP connections on 
+.I port
+of 
+.IR ip . 
+.P
+.B ddnsd-conf
+arranges  
+.BR ddnsd (8) 
+to chroot to 
+.IR D / root 
+and to run under the uid and gid of 
+.IR acct .
+.BR ddnsd (8) 
+will asked to write its data to the directory 
+.IR D / dot / rzonehier.
+.I rzonehier
+consists of TLD/secondleveldomain/thirdleveldomain/... 
+Eg. zone dyn.rc23.cx will result in dot/cx/rc23/dyn beeing used.
+.P
+.B ddnsd-conf
+creates the directorys
+.IR D / root / dot ,
+.IR D / root / tmp 
+and
+.IR D / root / dot / rzonedir .
+.P
+.B ddnsd-conf
+creates a Makefile in 
+.IR D / root 
+to run ddnsd-data creating a new 
+.I data.cdb 
+when called.
+.P
+.B ddnsd-conf
+creates an automatically rotated log directory in 
+.IR D /log/main. 
+The logs are owned by 
+.IR logacct . 
+The corrosponding 
+.BR multilog (8) 
+processes will run under the uid and gid of 
+.IR logacct . 
+The name
+.I logacct 
+must not contain any special characters. 
+.SH AUTHOR
+Doobee R. Tzeck <drt@ailis.de> - http://rc23.cx/
+.SH SEE ALSO
+ddnsd(8),
+filedns-conf(8),
+ddns-cleand-conf(8),
+tcpserver(1),
+supervise(8),
+svc(8),
+svscan(8),
+multilog(8),
+tai64nlocal(8),
+envuidgid(8),
+

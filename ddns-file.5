@@ -1,0 +1,87 @@
+.TH ddns-file 5
+.SH NAME
+ddns-file \- file format used by the ddns system
+.SH DESCRIPTION
+.IR ddnsd (8)
+uses a file format to store information about its clients
+read by various tools like
+.IR filedns (8).
+.P
+The file format can express IPv4, IPv6, DNS LOC records and comments.
+.SH "THE QMAIL FILE"
+The filename defines the hostname of the data saved in the file.
+The file contains one or more lines.
+Each line is a data record.
+There are four types of records
+(1) comment; (2) IPv4 address; (3) IPv6 address; (4) DNS LOC information.
+.TP 5
+(1)
+A 
+.B comment 
+line begins with a number sign:
+
+.EX
+     # this is a comment
+.EE
+
+The line will be ignored.
+.TP 5
+(2)
+A 
+.B IPv4 address 
+beginns with 
+.I `=,'
+followed by a dotted decimal IPv4 address,
+.I `,'
+and the decimal user id.
+
+.EX
+     =,1.2.3.4,23
+.EE
+
+.TP 5
+(3)
+A 
+.B IPv6 address 
+beginns with 
+.I `6,'
+followed by an coloned hexadecimal IPv6 address,
+.I `,'
+and the decimal user id.
+
+.EX
+     6,1234:5678::90ab:cdef,23
+.EE
+
+.TP 5
+(4)
+.B DNS LOC information 
+beginns with 
+.I `L,'
+followed by an encoded DNS LOC record,
+.I `,'
+and the decimal user id.
+
+.EX
+     L,\\000SS\\023\\212\\356\\352D\\201{'\\254\\000\\230\\254\\304,23
+.EE
+
+For the data format of a DNS LOC RR see  
+.I RfC 
+.IR 1876 .
+This data can be encoded as 
+.I\\xxx where 
+.I xxx is the octal value of an single byte. Only 
+.I `,'
+and
+.I \n
+have to be encoded. Programs must be prepared to read all other values 
+unencoded. But when creating entrys encoding non-ascii values increases
+readibility by humans.
+.P
+Each entry may contain extra spaces and tabs at the end of a line.
+Blank lines are allowed.
+.P
+.SH "SEE ALSO"
+ddnsd(8),
+ddns-cleand(8)

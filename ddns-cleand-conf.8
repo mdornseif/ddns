@@ -1,0 +1,66 @@
+.TH ddns-cleand-conf 8
+.SH NAME
+ddns-cleand-conf \- set up ddns-cleand for use with supervise/svscan
+.SH SYNOPSIS
+.B ddns-cleand-conf
+.I acct logacct D ddnsddir 
+.SH DESCRIPTION
+.B ddns-cleand-conf
+creates a service directory 
+.I D 
+that runs 
+.BR ddns-cleand (8) .
+The name 
+.I D 
+must start with a slash and must not contain any special characters. 
+.P
+You can run the service under 
+.BR svscan(8)
+by creating a symbolic link in the 
+.I /service 
+directory to
+.IR D .
+.P
+The service will start within five seconds, and will be restarted 
+upon reboot. You can use svc to control the service. 
+.P
+.B ddns-cleand-conf
+arranges  
+.BR ddns-cleand (8) 
+to chroot to 
+.I ddnsddir
+and to run under the uid and gid of 
+.IR acct .
+.I ddnsddir
+is the directory hierachy where ddns is 
+.IR chroot () ed 
+too, typically /service/ddnsd/root/.
+.I acct 
+should be the same account as 
+.BR ddnsd (8) 
+uses.
+.P
+.B ddns-cleand-conf
+creates an automatically rotated log directory in 
+.IR D /log/main. 
+The logs are owned by 
+.IR logacct . 
+The corrosponding 
+.BR multilog (8) 
+processes will run under the uid and gid of 
+.IR logacct . 
+The name
+.I logacct 
+must not contain any special characters. 
+.SH AUTHOR
+Doobee R. Tzeck <drt@ailis.de> - http://rc23.cx/
+.SH SEE ALSO
+ddns-cleand(8),
+filedns-conf(8),
+ddnsd-conf(8),
+supervise(8),
+svc(8),
+svscan(8),
+multilog(8),
+tai64nlocal(8),
+envuidgid(8)
