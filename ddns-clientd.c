@@ -1,11 +1,17 @@
-/* $Id: ddns-clientd.c,v 1.8 2000/07/14 23:57:56 drt Exp $
+/* $Id: ddns-clientd.c,v 1.9 2000/07/29 22:00:42 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
  *
  * (K)opyright is Myth
  * 
+ * This file is to long!
+ *
  * $Log: ddns-clientd.c,v $
+ * Revision 1.9  2000/07/29 22:00:42  drt
+ * retrying connection to server
+ * detecting a changed client ip
+ *
  * Revision 1.8  2000/07/14 23:57:56  drt
  * Added documentation in README and manpage for
  * ddns-clientd, rewriting of 0.0.0.1 in ddns-cliend
@@ -70,7 +76,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.8 2000/07/14 23:57:56 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.9 2000/07/29 22:00:42 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 
@@ -85,11 +91,13 @@ uint32 ttl = 120;
 char *serverip;
 uint32 port = 0;
 uint32 uid = 0;
-char iplocal[16];
+static char iplocal[16];
+static char iplocal_old[16];
 uint16 portlocal;
 
 static int flagexit = 0; 
 static int flagalarmed = 0;
+static int flagleaveipalone = 1;
 
 void die_nomem(void)
 {
@@ -158,19 +166,39 @@ void log_retuncode(int r)
 int buildup_connection(char *ip, uint16 p)
 {
   int s;
-  
+  int i;
+
   s = socket_tcp();
   if (s == -1)
     strerr_die2sys(100, FATAL, "unable to create socket: ");
   if (socket_bind4(s, "\0\0\0\0", 0) == -1)
     strerr_die2sys(100, FATAL, "unable to bind socket: ");
-  if (timeoutconn(s, ip, p, 120) != 0)
-    strerr_die2sys(100, FATAL, "unable to connect: ");
+
+  /* Retrying */
+  for(i = 1; i < 5; i++)
+    {
+      if(i > 1)
+	{
+	  buffer_puts(buffer_2, "ddns-clientd: retrying connection in a few seconds\n");
+	  buffer_flush(buffer_2);
+	  sleep(i * 3);
+	}
+
+      timeoutconn(s, ip, p, i*30);
+      if (socket_connected(s))
+        break; 
+ 
+      strerr_warn1("ddns-clientd: warning: unable to connect: ", &strerr_sys);
+    }
+
+  if(i >= 5)
+    strerr_die2x(100, FATAL, "wasn't able to connect");
+
 
   socket_tcpnodelay(s); /* if it fails, bummer */
 
     /* get local ip */
-  if (socket_local4(s,iplocal,&portlocal) == -1)
+  if (socket_local4(s, iplocal, &portlocal) == -1)
     strerr_die2sys(100, FATAL, "unable to get local address: ");
 
   if (fd_move(6,s) == -1)
@@ -205,11 +233,10 @@ static int call_ddnsc(int action)
     buffer_put(buffer_2, strip, ip4_fmt(strip, ip4));
     buffer_puts(buffer_2, "\n");
     buffer_flush(buffer_2);
+    flagleaveipalone = 0;
   }
      
   r = ddnsc(action, uid, ip4, ip6, &loc, key.s, &tmpttl);
-
-  teardown_connection();
 
   if((tmpttl != ttl) && (tmpttl != ttl))
     {
@@ -219,22 +246,66 @@ static int call_ddnsc(int action)
       buffer_puts(buffer_2, "\n");
       buffer_flush(buffer_2);
     }
+
+  teardown_connection();
+
   return r;
 }
 
 static int set_entry()
 {
-  return call_ddnsc(DDNS_T_SETENTRY);
-}
+  char strip[IP4_FMT];
+  int r;
+  
+  r = call_ddnsc(DDNS_T_SETENTRY);
+  byte_copy(iplocal_old, 16, iplocal); 
+  
+  if(byte_diff(ip4, 4, iplocal))
+    {
+      buffer_puts(buffer_2, "ddns-clientd: warning: announced ip (");
+      buffer_put(buffer_2, strip, ip4_fmt(strip, ip4));
+      buffer_puts(buffer_2, ") is different from ip we actually use (");
+      buffer_put(buffer_2, strip, ip4_fmt(strip, iplocal));
+      buffer_puts(buffer_2, ")\n");
+      buffer_flush(buffer_2);
+    }
 
-static int renew_entry()
-{
-  return call_ddnsc(DDNS_T_RENEWENTRY);
+  return r;
 }
 
 static int kill_entry()
 {
   return call_ddnsc(DDNS_T_KILLENTRY);
+}
+
+static int renew_entry()
+{
+  int r;
+  char strip[IP4_FMT];
+
+  r = call_ddnsc(DDNS_T_RENEWENTRY);
+  if(byte_diff(iplocal_old, 16, iplocal))
+    {
+      buffer_puts(buffer_2, "ddns-clientd: warning: or ip changed from ");
+      buffer_put(buffer_2, strip, ip4_fmt(strip, iplocal_old));
+      buffer_puts(buffer_2, "to ");
+      byte_copy(ip4, 4, iplocal);
+      buffer_put(buffer_2, strip, ip4_fmt(strip, iplocal));
+      buffer_puts(buffer_2, "\n");
+      buffer_flush(buffer_2);
+
+      if(!flagleaveipalone)
+	{
+	  buffer_puts(buffer_2, "ddns-clientd: warning: killing old entry and setting new entry with new\n");
+	  buffer_flush(buffer_2);
+	  
+	  kill_entry();
+	  byte_copy(ip4, 4, iplocal);
+	  r = set_entry();
+	}
+    }
+
+  return r;
 }
 
 // send killentryrequest to server and terminate
@@ -269,7 +340,6 @@ void doit(void)
   stralloc_catb(&sa, strip, ip4_fmt(strip, ip4));
   stralloc_cats(&sa, "/");
   stralloc_catb(&sa, strip, ip6_fmt(strip, ip6));
-  stralloc_cats(&sa, "\n");  
   stralloc_0(&sa);
   log(sa.s);
 
@@ -280,8 +350,12 @@ void doit(void)
     {
       // deregister and try again
       log("warning there is already an entry. killing and reregistering");
+      sleep(1);
       r = kill_entry();
+      log("killed");
+      sleep(1);
       r = set_entry();
+      log("registered");
     }
     
   if(r != DDNS_T_ACK)
