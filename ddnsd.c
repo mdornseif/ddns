@@ -1,4 +1,4 @@
-/* $Id: ddnsd.c,v 1.18 2000/07/17 21:45:24 drt Exp $
+/* $Id: ddnsd.c,v 1.19 2000/07/29 21:41:49 drt Exp $
  *   --drt@ailis.de
  *
  * server for ddns - this file is to long
@@ -6,6 +6,15 @@
  * (K)allisti
  *
  * $Log: ddnsd.c,v $
+ * Revision 1.19  2000/07/29 21:41:49  drt
+ * creation of network packets is done in ddns_pack()
+ * nomem() renamed to die_nomem()
+ * first implementation of writing to a fifo
+ * fiddeled with stat() which seems not to work on my
+ * powerbook - the glibc/kernel interfaces for stat()
+ * seem to be a real mess - glibc seems to be a real mess
+ * thrown away dump_packet()
+ *
  * Revision 1.18  2000/07/17 21:45:24  drt
  * ddnsd and ddns-cleand now refuse to run as root
  *
@@ -100,14 +109,16 @@
 #include "stralloc.h"
 #include "strerr.h"
 #include "timeoutread.h"
+#include "timeoutwrite.h"
 
 #include "mt19937.h"
 #include "rijndael.h"
 #include "iso2txt.h"
+#include "ddns_pack.h"
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.18 2000/07/17 21:45:24 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.19 2000/07/29 21:41:49 drt Exp $";
 
 static char *datadir;
 
@@ -116,7 +127,7 @@ static uint32 ttl;
 static unsigned char *remotehost, *remoteinfo, *remoteip, *remoteport;
 static stralloc username = {0};
 
-void nomem(void)
+void die_nomem(void)
 {
   strerr_die1sys(111, "ddnsd: fatal: help - no memory ");
 }
@@ -124,34 +135,29 @@ void nomem(void)
 /* fill p with random, timestamp, magic, encrypt it and send it */
 void ddnsd_send(struct ddnsreply *p)
 {
-  struct taia t;
-  struct ddnsreply ptmp;
-
-  /* fill our structure */
+  stralloc tmp = { 0 };
+  
   /* and get it into network byte order */
   p->magic = DDNS_MAGIC;
-  ptmp.random1 = randomMT() & 0xffff;
-  taia_now(&t);
-  taia_pack((char *) &ptmp.timestamp, &t);
-  uint32_pack((char *) &ptmp.leasetime, p->leasetime);
-  uint32_pack((char*) &ptmp.uid, p->uid);
-  uint16_pack((char*) &ptmp.type, p->type);
-  uint32_pack((char*) &ptmp.magic, p->magic);
+  p->random1 = randomMT() & 0xffff;
+  taia_now(&p->timestamp);
   /* some unused bytes are filled with random data to make cryptoanalysis harder */
-  ptmp.reserved[0] = randomMT();
-  ptmp.reserved[1] = randomMT();
-  ptmp.reserved[2] = randomMT();
-  ptmp.reserved[3] = randomMT();
-  ptmp.reserved[4] = randomMT();
-  ptmp.reserved[5] = randomMT();
-  ptmp.reserved[6] = randomMT();
-  ptmp.reserved[7] = randomMT();
+  p->reserved[0] = randomMT();
+  p->reserved[4] = randomMT();
+  p->reserved[8] = randomMT();
+  p->reserved[12] = randomMT();
+  p->reserved[16] = randomMT();
+  p->reserved[20] = randomMT();
+  p->reserved[24] = randomMT();
+  p->reserved[28] = randomMT();
+
+  ddnsreply_pack_big(&tmp, p);
 
   /* encrypt with rijndael, key shedule was already set up when reciving data */
-  rijndaelEncrypt((char *) &ptmp.type);
-  rijndaelEncrypt((char *) &ptmp.type + 32);
+  rijndaelEncrypt(tmp.s + 4);
+  rijndaelEncrypt(tmp.s + 36);
 
-  buffer_put(buffer_1, (char *) &ptmp, sizeof(struct ddnsreply));
+  buffer_put(buffer_1, tmp.s, DDNSREPLYSIZE);
   buffer_flush(buffer_1); 
 }
 
@@ -199,72 +205,13 @@ void ddnsd_send_err_sys(uint32 uid, char *errstr)
 {
   stralloc err = {0};
 
-  if(!stralloc_copys(&err, errstr)) nomem();
-  if(!stralloc_cats(&err, ": ")) nomem();
-  if(!stralloc_cats(&err, error_str(errno))) nomem();
-  if(!stralloc_0(&err)) nomem();
+  if(!stralloc_copys(&err, errstr)) die_nomem();
+  if(!stralloc_cats(&err, ": ")) die_nomem();
+  if(!stralloc_cats(&err, error_str(errno))) die_nomem();
+  if(!stralloc_0(&err)) die_nomem();
   ddnsd_send_err(uid, DDNS_T_ESERVINT, err.s);
 }
 
-/* dump a packet to stderr for debugging. 
-   XXX: should be removed */
-void dump_packet(struct ddnsrequest *p, char *info)
-{
-  char strnum[FMT_ULONG];
-  
-  buffer_puts(buffer_2, info);
-  buffer_puts(buffer_2, ": uid=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->uid));
-  buffer_puts(buffer_2, " type=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->type));
-  buffer_puts(buffer_2, " magic=0x");
-  buffer_put(buffer_2, strnum, fmt_xint(strnum, p->magic));
-  buffer_puts(buffer_2, " ip4=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip4[0]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip4[1]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip4[2]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip4[3]));
-  buffer_puts(buffer_2, " ip6=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[0]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[1]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[2]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[3]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[4]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[5]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[6]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[7]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[8]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[9]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[10]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[11]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[12]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[13]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[14]));
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (ulong)p->ip6[15]));
-  buffer_puts(buffer_2, " rnd1=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random1));
-  buffer_puts(buffer_2, " rnd2=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->random2));
-  buffer_puts(buffer_2, "\n   r1=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->reserved1));
-  buffer_puts(buffer_2, " r2=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->reserved2));
-  buffer_puts(buffer_2, " loc_size=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->loc_size));
-  buffer_puts(buffer_2, " loc_hpre=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->loc_hpre));
-  buffer_puts(buffer_2, " loc_vpre=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, (uint32)p->loc_vpre));
-  buffer_puts(buffer_2, " loc_lat=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->loc_lat));
-  buffer_puts(buffer_2, " loc_long=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->loc_long));
-  buffer_puts(buffer_2, " loc_alt=0x");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, p->loc_alt));
-  buffer_puts(buffer_2, "\n");
-  buffer_flush(buffer_2);
-  
-}
 
 /* find a user in the cdb */
 /* returns 1 when found, 0 when unknown user */
@@ -284,13 +231,13 @@ int ddnsd_find_user(uint32 uid, stralloc *sa)
   cdb_init(&c, fd);
 
   /* find entry */
-  /* uid in cdb is in network byte order */ 
+  /* uid in cdb is in intel byte order */ 
   uint32_pack(key, uid);
   r = cdb_find(&c, key, 4); 
-  if (r == 1)
+  if (r > 0)
     {
       /* read data */
-      if(!stralloc_ready(sa, cdb_datalen(&c))) nomem();
+      if(!stralloc_ready(sa, cdb_datalen(&c))) die_nomem();
       if (cdb_read(&c, sa->s, cdb_datalen(&c), cdb_datapos(&c)) == -1)
 	ddnsd_send_err_sys(uid, "can't read from data.cdb");
       else
@@ -316,48 +263,35 @@ int ddnsd_recive(struct ddnsrequest *p)
 {
   int r;
   char *key;
-  struct ddnsrequest ptmp;
+  char tmp[DDNSREQUESTSIZE];
   struct taia now;
   struct taia deadline;
   stralloc data = {0};
   
   /* read using a 120 second timeout */
-  r = timeoutread(120, 0, &ptmp, sizeof(struct ddnsrequest));
-  if(r != 68) 
-    /* 2 * 256 bits + 32 bits userid = 68 bytes */
+  r = timeoutread(120, 0, tmp, DDNSREQUESTSIZE);
+  if(r != DDNSREQUESTSIZE) 
     ddnsd_send_err(p->uid, DDNS_T_EPROTERROR, "wrong packetsize or timeout");
-
-  /* bring the uid in host byteorder */
-  uint32_unpack((char*) &ptmp.uid, &p->uid);
   
-  if(ddnsd_find_user(p->uid, &data))
+  /* bring the uid in host byteorder */
+  uint32_unpack_big(tmp, &p->uid);
+
+  if(ddnsd_find_user(p->uid, &data) == 1)
     {
       key = data.s;
       // TTL and username from cdb
       uint32_unpack(&data.s[32], &ttl);
-      if(!stralloc_copyb(&username, &data.s[36], data.len-36)) nomem();
+      if(!stralloc_copyb(&username, &data.s[36], data.len-36)) die_nomem();
       
       /* initialize rijndael with 256 bit blocksize and 256 bit keysize */
       rijndaelKeySched(8, 8, key);
       
       /* decrypt two blocks ( = 512 bits = one ddnsd request) with rijndael */
-      rijndaelDecrypt((char *) &ptmp.type);
-      rijndaelDecrypt((char *) &ptmp.type + 32);
-      
-      /* bring numbers in host byteorder */
-      uint16_unpack((char*) &ptmp.type, &p->type);
-      uint32_unpack((char*) &ptmp.magic, &p->magic);
-      byte_copy(&p->ip4[0], 4, &ptmp.ip4[0]);
-      byte_copy(&p->ip6[0], 16, &ptmp.ip6[0]);
-      taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
-      uint32_unpack((char*) &ptmp.loc_lat, &p->loc_lat);
-      uint32_unpack((char*) &ptmp.loc_long, &p->loc_long);
-      uint32_unpack((char*) &ptmp.loc_alt, &p->loc_alt);
-      /* this are bytes which don't need conversation */
-      p->loc_size = ptmp.loc_size;
-      p->loc_hpre = ptmp.loc_vpre;
-      p->loc_vpre = ptmp.loc_hpre;
-      
+      rijndaelDecrypt(tmp + 4);
+      rijndaelDecrypt(tmp + 36);
+
+      ddnsrequest_unpack_big(tmp + 4, p);
+ 
       /* check for the right magic */
       if(p->magic != DDNS_MAGIC)
 	/* propably decryption didn't suceed */
@@ -386,9 +320,34 @@ int ddnsd_recive(struct ddnsrequest *p)
       return p->type;
     }
   else
-    ddnsd_send_err(0, DDNS_T_EUNKNOWNUID, "unknown user");
+    ddnsd_send_err(p->uid, DDNS_T_EUNKNOWNUID, "unknown user");
   /* error condition */
   return 0;
+}
+
+
+void ddnsd_fifowrite(char m, char *line, int len)
+{
+  int fdfifo;
+
+  // XXX we should do this *after* we have finished client communication - should we?
+  // XXX opening and closing for every line isn't strictly effective
+
+  /* we need this to keep the fifo from beeing closed */
+  fdfifo = open_write(ACLWFIFONAME);
+  if (fdfifo == -1)
+    strerr_warn3("ddnsd: unable to open for write ", ACLWFIFONAME, " ", &strerr_sys);
+
+  if((timeoutwrite(5, fdfifo, &m, 1) != 1) 
+     || (timeoutwrite(5, fdfifo, line, len) != len))
+    strerr_warn3("can't write to fifo ", ACLWFIFONAME, " ", &strerr_sys);
+  
+  /* add newline if needed */
+  if(line[len] != '\n' && line[len-1] != '\n')
+    if(timeoutwrite(5, fdfifo, "\n", 1) != 1)
+      strerr_warn3("can't write to fifo ", ACLWFIFONAME, " ", &strerr_sys);
+  
+  close(fdfifo);
 }
 
 /* take an username and create a filename from it by 
@@ -396,10 +355,10 @@ int ddnsd_recive(struct ddnsrequest *p)
 void create_datafilename(stralloc *tmpname, stralloc *username)
 {
   /* create the filename in our datastructure */
-  if(!stralloc_copys(tmpname, datadir)) nomem();
-  if(!stralloc_cats(tmpname, "/")) nomem();
-  if(!stralloc_cat(tmpname, username)) nomem();
-  if(!stralloc_0(tmpname)) nomem();
+  if(!stralloc_copys(tmpname, datadir)) die_nomem();
+  if(!stralloc_cats(tmpname, "/")) die_nomem();
+  if(!stralloc_cat(tmpname, username)) die_nomem();
+  if(!stralloc_0(tmpname)) die_nomem();
 }
 
 /* handle a setentryrequest */
@@ -410,31 +369,29 @@ void ddnsd_setentry( struct ddnsrequest *p)
   char host[64] = {0};
   int loop = 0;
   int fd = 0;
-  stralloc sa = {0};
+  stralloc out = {0};
   stralloc tmpname = {0};
   stralloc err = {0};
   stralloc finname = {0};
-  char outbuf[BUFFER_OUTSIZE];
   char strnum[FMT_ULONG];
   char strip[IP6_FMT];
   char tb[16];
-  buffer ssout;
   
   /* create a temporary name */
   host[0] = 0;
   gethostname(host,sizeof(host));
   for (loop = 0;;++loop)
     {
-      if(!stralloc_copys(&tmpname, "tmp/")) nomem();
-      if(!stralloc_catulong0(&tmpname, now(),0)) nomem(); 
-      if(!stralloc_cats(&tmpname, ".")) nomem(); 
-      if(!stralloc_catulong0(&tmpname, getpid(), 0)) nomem(); 
-      if(!stralloc_cats(&tmpname, ".")) nomem(); 
-      if(!stralloc_cats(&tmpname, host)) nomem(); 
-      if(!stralloc_cats(&tmpname, "-")) nomem(); 
-      if(!stralloc_cat(&tmpname, &username)) nomem(); 
-      if(!stralloc_0(&tmpname)) nomem();
-      
+      if(!stralloc_copys(&tmpname, "tmp/")) die_nomem();
+      if(!stralloc_catulong0(&tmpname, now(),0)) die_nomem(); 
+      if(!stralloc_cats(&tmpname, ".")) die_nomem(); 
+      if(!stralloc_catulong0(&tmpname, getpid(), 0)) die_nomem(); 
+      if(!stralloc_cats(&tmpname, ".")) die_nomem(); 
+      if(!stralloc_cats(&tmpname, host)) die_nomem(); 
+      if(!stralloc_cats(&tmpname, "-")) die_nomem(); 
+      if(!stralloc_cat(&tmpname, &username)) die_nomem(); 
+      if(!stralloc_0(&tmpname)) die_nomem();
+
       if (stat(tmpname.s,&st) == -1) 
 	if (errno == error_noent) 
 	  break;
@@ -455,31 +412,38 @@ void ddnsd_setentry( struct ddnsrequest *p)
   
   /* XXX: we need checks if the user is comming from the claimed ip */
   
-  /* write data to file */
-  buffer_init(&ssout,write, fd, outbuf, sizeof outbuf);
-
   /* ip4 */
   if(byte_diff(p->ip4, 4, "\0\0\0\0"))
     {
-      buffer_puts(&ssout, "=,");
-      buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip4));
-      buffer_puts(&ssout, ",");
-      buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
-      buffer_puts(&ssout, "\n");
+      stralloc_cats(&out, "=,");
+      stralloc_catb(&out, strip, ip4_fmt(strip, (char *) &p->ip4));
+      stralloc_cats(&out, ",");
+      stralloc_catb(&out, strnum, fmt_ulong(strnum, p->uid));
+      stralloc_cats(&out, "\n");
+
+      if(timeoutwrite(60, fd, out.s, out.len) != out.len)
+	ddnsd_send_err_sys(p->uid, "couldn't write to disk");
+      /* inform others via fifo */
+      ddnsd_fifowrite('s', out.s, out.len);
     }
 
   /* ip6 */
   if(byte_diff(p->ip6, 16, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"))
     {
-      buffer_puts(&ssout, "6,");
-      buffer_put(&ssout, strip, ip6_fmt(strip, (char *) &p->ip6));
-      buffer_puts(&ssout, ",");
-      buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
-      buffer_puts(&ssout, "\n");
+      stralloc_copys(&out, "6,");
+      stralloc_catb(&out, strip, ip6_fmt(strip, (char *) &p->ip6));
+      stralloc_cats(&out, ",");
+      stralloc_catb(&out, strnum, fmt_ulong(strnum, p->uid));
+      stralloc_cats(&out, "\n");
+     
+      if(timeoutwrite(60, fd, out.s, out.len) != out.len)
+	ddnsd_send_err_sys(p->uid, "couldn't write to disk");
+      /* inform others via fifo */
+      ddnsd_fifowrite('s', out.s, out.len);
     }
 
   /* LOC */
-  buffer_puts(&ssout, "L,");
+  stralloc_copys(&out, "L,");
   tb[0] = 0;
   tb[1] = p->loc_size;
   /* XXX: something is mixed up here, fixme */
@@ -488,12 +452,15 @@ void ddnsd_setentry( struct ddnsrequest *p)
   uint32_pack_big(&tb[4], p->loc_lat); 
   uint32_pack_big(&tb[8], p->loc_long); 
   uint32_pack_big(&tb[12], p->loc_alt);  
-  iso2txt(tb, 16, &sa);
-  buffer_put(&ssout, sa.s, sa.len);
-  buffer_puts(&ssout, ",");
-  buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
-  buffer_puts(&ssout, "\n");
-  buffer_flush(&ssout); 
+  iso2txt(tb, 16, &out);
+  stralloc_cats(&out, ",");
+  stralloc_catb(&out, strnum, fmt_ulong(strnum, p->uid));
+  stralloc_cats(&out, "\n");
+  
+  if(timeoutwrite(60, fd, out.s, out.len) != out.len)
+    ddnsd_send_err_sys(p->uid, "couldn't write to disk");
+  /* inform others via fifo */
+  ddnsd_fifowrite('s', out.s, out.len);
   
   close(fd);
   
@@ -521,10 +488,10 @@ void ddnsd_setentry( struct ddnsrequest *p)
       unlink(tmpname.s);
 
       /* return error */
-      if(!stralloc_copys(&err, "can't rename ")) nomem();
-      if(!stralloc_cats(&err, tmpname.s)) nomem();
-      if(!stralloc_cats(&err, " to ")) nomem();
-      if(!stralloc_cat(&err, &finname)) nomem();
+      if(!stralloc_copys(&err, "can't rename ")) die_nomem();
+      if(!stralloc_cats(&err, tmpname.s)) die_nomem();
+      if(!stralloc_cats(&err, " to ")) die_nomem();
+      if(!stralloc_cat(&err, &finname)) die_nomem();
       ddnsd_send_err_sys(p->uid, err.s);
     }
   
@@ -568,10 +535,15 @@ void ddnsd_renewentry( struct ddnsrequest *p)
     }
   
   /* update ctime */
+  /*  XXX: for some reason this doesn't work
   ut.actime = st.st_atime;
   ut.modtime = st.st_mtime;
-
+  
   if(utime(tmpname.s, &ut) == -1)
+    ddnsd_send_err_sys(p->uid, tmpname.s);
+  */
+
+  if(utime(tmpname.s, NULL) == -1)
     ddnsd_send_err_sys(p->uid, tmpname.s);
     
   ddnsd_log(p->uid, "renewing entry");
@@ -584,11 +556,14 @@ void ddnsd_renewentry( struct ddnsrequest *p)
   r.uid = p->uid;
   r.leasetime = ttl;
   ddnsd_send(&r);  
+
+  ddnsd_fifowrite('r', strnum, fmt_ulong(strnum, p->uid)); 
 }
 
 /* the user requested to delete his entry from the dns */
 void ddnsd_killentry( struct ddnsrequest *p)
 {
+  char strnum[FMT_ULONG];
   struct ddnsreply r;
   stralloc tmpname = {0};
   
@@ -611,6 +586,8 @@ void ddnsd_killentry( struct ddnsrequest *p)
   r.uid = p->uid;
   r.leasetime = 0;
   ddnsd_send(&r);  
+ 
+  ddnsd_fifowrite('k', strnum, fmt_ulong(strnum, p->uid)); 
 }
 
 void usage(void)
@@ -621,7 +598,7 @@ void usage(void)
 int main(int argc, char **argv)
 {
   struct ddnsrequest p = { 0 };
-  
+
   /* chroot() to $ROOT and switch to $UID:$GID */
   droprootordie("ddnsd: ");
 
@@ -670,7 +647,6 @@ int main(int argc, char **argv)
       ddnsd_killentry(&p);
       break;
     default:
-      dump_packet(&p, "unsupported type/command");
       ddnsd_send_err(p.uid, DDNS_T_EPROTERROR, "unsupported type/command");
     }
   
