@@ -1,0 +1,81 @@
+.TH ddnsd-data 8
+.SH NAME
+ddnsd-data \- produce data.cdb for ddnsd(8)
+.SH SYNOPSIS
+.B ddnsd-data
+.SH DESCRIPTION
+.B ddnsd-data
+created data.cdb for 
+.IR ddnsd (8)
+.P
+.B ddnsd -data
+reads a set of lines from stdin describing user records for
+ddnsd one per line. It then creates a 
+.I data.cdb
+file suited for 
+.IR ddnsd (8)
+.P
+.B ddnsd-data
+writes to 
+.I data.tmp
+and after successfull finishing renames
+.I data.tmp 
+to
+.IR data.cdb .
+This allows using 
+.B ddnsd-data
+while 
+.IR ddnsd (8)
+is running.
+.P
+.B ddnsd-data
+reads line per line from stdin.
+Lines starting with 
+.I #
+will be ignored.
+The lines contain colon seperated fields.
+The first field is a decimal  uid > 0 and < 2^32.
+.P
+The second field is the username which will be used to create
+the hostname of this user. Therefore only characters which are legal
+in DNS hostnames are allowed. These are 
+.IR a-z ,
+.IR A-Z,
+and
+.IR - .
+.P 
+The third field is the shared secret between client and server.
+It has to be 32 byte long and should contain 256 bits of entropy.
+If you want to use byte values which have no ascii representation you 
+can escape ocatal values by a backslash. The format is 
+.I \\\\xxx 
+where 
+.I xxx represents a three digit octal number in the range 0-277.
+You are not allowed to use less then three digits.
+.P if the shared secret is shorter than 32 bytes 
+.B ddnsd-data will extend it by repeating it until there are 32 bytes.
+This degenetartes entropy in the key material and therefore the security.
+.P
+The third field ist the leasetime. this means the timespan in
+seconds in which the client has to renew it's entry. If this field is 
+left empty, a default value of 3600 will be used.
+.P
+On errors 
+.B ddnsd-data exits with a message and an error code of 111. 
+.SH BUGS
+No known bugs.
+.SH EXAMPLE
+.IR data :
+	 #uid,uname/hostn  ,key   ,ttl       
+	 1234,joecypherpunk,geheim,3600
+.P
+.IR invocation :
+         $ ddnsd-data < data
+.P
+.SH AUTHOR
+.B ddns-identd
+is written by Doobee R. Tzeck <drt@ailis.de>
+.P
+.SH SEE ALSO
+multilog(8), ddns-clientd(8), ddnsd(8),
+http://rc23.cx/ddns/

@@ -105,7 +105,7 @@ The location can't be left out, but you can define a location
 of the size of your city, country or the whole Earth. 
 .P
 On errors 
-.B dffingerd 
+.B ddns-clientd
 prints out an error message to stderr and exits with a status of 111
 if the error is in the initialisation and 100 if the error is network 
 related.
@@ -118,9 +118,9 @@ ddns-clientd 0.0.0.1 1234::cdef 50 57 9.7 N 6 54 08.3 E 5700 5000 1500 5000
 If you really can't figure out where you are you can try
 .IP
 ddns-clientd 1.2.3.4 0 0 0 0.0 N 0 0 0.0 E 1000 2000000000 2000000000 300000
-.SH EXAMPLE
+.SH AUTHOR
 .B ddns-identd
 is written by Doobee R. Tzeck <drt@ailis.de>
 .SH SEE ALSO
-multilog(8),
+multilog(8), ddnsd(8),
 http://rc23.cx/ddns/

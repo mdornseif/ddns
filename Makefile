@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.16 2000/07/14 23:57:56 drt Exp $
+# $Id: Makefile,v 1.17 2000/07/17 13:45:56 drt Exp $
 
 DOWNLOADER = "wget"
 
@@ -83,9 +83,19 @@ sig_int.o sig_term.o socket_delay.o socket_local.o timeoutconn.o
 drtlib.a: iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
 	ar cr drtlib.a iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
 
-setup-client: ddns-cleand.
-	install -bDs ddns-client /usr/local/bin/
-	install -bDs ddns-clientd.8 /usr/local/man/man8/
+setup-client: ddns-cleand
+	install -bDs ddns-clientd /usr/local/bin/ddns-clientd
+	install -bD ddns-clientd.8 /usr/local/man/man8/ddns-clientd.8
+
+setup-server:
+	install -Ds ddnsd /usr/local/bin/ddnsd
+	install -D ddnsd.8 /usr/local/man/man8/ddnsd.8
+	install -Ds ddnsd-data /usr/local/bin/ddnsd-data
+	install -D ddnsd-data.8 /usr/local/man/man8/ddnsd-data.8
+	install -Ds filedns /usr/local/bin/filedns
+	install -D filedns.8 /usr/local/man/man8/filedns.8
+#	install -Ds ddnsd-cleand /usr/local/bin/ddnsd-cleand
+#	install -D ddnsd-cleand.8 /usr/local/man/man8/ddns-cleand.8
 
 clean:
 	rm -f *.o ddnsd ddnsd-data ddns-clientd filedns hassgprm.h hassgact.h *.a

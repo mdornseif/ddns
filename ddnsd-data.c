@@ -1,9 +1,12 @@
-/* $Id: ddnsd-data.c,v 1.5 2000/05/02 19:37:04 drt Exp $
+/* $Id: ddnsd-data.c,v 1.6 2000/07/17 13:45:56 drt Exp $
  *  --drt@ailis.de
  *
  * There is no such thing like copyright.
  * 
  * $Log: ddnsd-data.c,v $
+ * Revision 1.6  2000/07/17 13:45:56  drt
+ * Dokumentation upgrades
+ *
  * Revision 1.5  2000/05/02 19:37:04  drt
  * Handling of error conditions
  * switched to 256 bit keys
@@ -36,7 +39,7 @@
 #include "pad.h"
 #include "txtparse.h"
 
-static char rcsid[] = "$Id: ddnsd-data.c,v 1.5 2000/05/02 19:37:04 drt Exp $";
+static char rcsid[] = "$Id: ddnsd-data.c,v 1.6 2000/07/17 13:45:56 drt Exp $";
 
 #define DEFAULT_TTL 3600
 #define NUMFIELDS 10
@@ -121,16 +124,16 @@ int main()
 	    }
 	  else 
 	    {
-	      k = byte_chr(line.s + j,line.len - j,':');
-	      if (!stralloc_copyb(&f[i],line.s + j,k)) nomem();
+	      k = byte_chr(line.s + j, line.len - j, ',');
+	      if (!stralloc_copyb(&f[i], line.s + j, k)) nomem();
 	      j += k + 1;
 	    }
 	}
       
       /* Format of datafile 
 	 
-	 uid:uname        :key   :ttl                
-	 123:joecypherpunk:geheim:3600
+	 uid,uname        ,key   ,ttl                
+	 123,joecypherpunk,geheim,3600
 	 
 	 
 	 Format of cdb:

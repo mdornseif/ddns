@@ -1,0 +1,77 @@
+.TH ddnsd-clean 8
+.SH NAME
+ddnsd-clean \- cleans old entrys from ddnsd/filedns directorytree
+.SH SYNOPSIS
+.B ddnsd-cleand /dnsdir
+.SH DESCRIPTION
+.B ddnsd-cleand 
+XXX
+.P
+.B Upon startup 
+.B ddns-cleand
+will 
+.IR chroot (3)
+to the directory given by the enviroment variable
+.IR $ROOT .
+It then drops privileges to the user and group set by
+.I $UID
+and
+.IR $GID .
+.P
+.B ddnsd-cleand 
+will then remove entrys older then
+1.5 days from the directory 
+.IR /tmp .
+
+After that traverses the directory tree
+.I /ddnsdir
+reading all files in there.
+It will parse the files and for any entrys found in 
+there it looks up the uid in data.cdb.
+If the 
+.P
+.I data.cdb
+should be created with 
+.IR ddnsd-data (8)
+.P
+If the user is found 
+.I ddnsd creates a file in 
+.I /datadir 
+named like the username found in 
+.I data.cdb.
+The client gets send an acknowledgment via stdout.
+.P
+The file creation is done like the 
+.I maildir algorythmn
+outlines.
+.B ddnsd
+uses the directory
+.I /tmp 
+for file creation. If an error occures 
+.B ddnsd 
+might leave temporary files in this directory which an be 
+safely deleted if older than 1.5 days.
+.P
+The format of the created file is described in
+.IR ddnsd-file (5)
+.P
+.B ddns-clientd
+logs to stderr. 
+.BR multilog (8)
+is well suited for handling this.
+.P
+.B ddnsd 
+doesn't allow to register the same uid twice but it allows to
+renew or kill an entry even if it is older than it's leasetime.
+.P
+.SH BUGS
+Many. Logging, errorcodes are not consistent, ddns is not suited to use 
+udp as a transport, ttl is not dynamically used, files are left in /tmp
+and surly a lot other bugs.
+.SH AUTHOR
+.B ddns-cleand
+is written by Doobee R. Tzeck <drt@ailis.de>
+.P
+.SH SEE ALSO
+multilog(8), ddns-clientd(8), ddnsd-data(8),
+http://rc23.cx/ddns/

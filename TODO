@@ -1,16 +1,24 @@
 ERRORS
+* ddnsd-cleand.man
+* ddnsd-file.man
+* install scripts
 
 CLEANUPS
+* rename ddns-cleand to ddnsd-cleand
 * defaults in ddns-clientd
 * clean up sig.*
-* clean up loc.*
+* clean up loc.* / get rid of sprintf()
 * clean up sourcecode
 * clean up log/error messages
 * -Wall
 * check behaviour under error-conditions
 * README
-* write manpages
 * check ddns-cleand
+* proofreading of man pages
+* unify parsing of fields in fieldsep.c
+* change semantics of timestamping so ddns-cleand doesn't 
+  have to read from data.cdb (P)
+* ddnsd-cleand needs serious tuning
 
 FEATURES
 * retry connection to server in client
@@ -24,4 +32,8 @@ FEATURES
 * support for round-robbin dns of the server ip in ddns-clientd
 * support for ipv6 as a transport in ddns-clientd, ddnsd and filedns
 * create an action daemon
-* install scripts
+
+BLUE SKY
+* UDP as a transport
+* use multiple servers which are connected by multicast
+* support for mutiple zones in filedns ?

@@ -1,0 +1,54 @@
+.TH filedns 8
+.SH NAME
+filedns \- dns server publishing a single zone
+.SH SYNOPSIS
+.B filedns 
+.SH DESCRIPTION
+.B filedns
+is a server for serving single dns querys out of a single zone.
+It reads its information out of a directory structure.
+.P
+Upon startup
+.B filedns
+binds to port 
+.I UDP 
+.IR 53 ,
+.IR chroot (3)s
+to the directory in the enviroment variable
+.I $ROOT
+and dorps it privileges to user
+.I $UID
+and group
+.IR $GID .
+.P
+It then listens for incomming dns on port 53.
+.P
+To answer querys 
+.B filedns
+trys to open a file in a directory tree corrospondending  
+to the dns tree. This means that information for
+.I drt.dyn.rc23.cx
+is searched in the file
+.IR /cx/rc23/dyn/drt .
+.P
+The format of this file is described in 
+.IR ddnsd-file (5).
+.P
+Recursive querys are discarded, querys for files/names which
+filedns can't find are answered with NXDOMAIN.
+.P
+.B filedns logs to stderr. 
+.IR multilog (8) 
+is able to handle this well.
+.P
+.SH BUGS
+The handling of authority is broken.
+.P
+.SH AUTHOR
+.B filedns
+is written by Doobee R. Tzeck <drt@ailis.de> heaviely 
+borrowing code from Dan Bernsteins walldns.
+.P
+.SH SEE ALSO
+multilog(8), ddns-clientd(8), ddnsd-data(8),
+http://rc23.cx/ddns/
