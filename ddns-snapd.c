@@ -1,7 +1,10 @@
-/* $Id: ddns-snapd.c,v 1.2 2000/08/02 20:13:22 drt Exp $
- *  --drt@ailis.de
+/* $Id: ddns-snapd.c,v 1.3 2000/11/21 19:45:01 drt Exp $
+ *  --drt@un.bewaff.net
  *
  * $Log: ddns-snapd.c,v $
+ * Revision 1.3  2000/11/21 19:45:01  drt
+ * Tried to bring this up-to-date.
+ *
  * Revision 1.2  2000/08/02 20:13:22  drt
  * -V
  *
@@ -34,7 +37,7 @@
 #include "dAVLTree.h"
 #include "traversedirhier.h"
 
-static char rcsid[]="$Id: ddns-snapd.c,v 1.2 2000/08/02 20:13:22 drt Exp $";
+static char rcsid[]="$Id: ddns-snapd.c,v 1.3 2000/11/21 19:45:01 drt Exp $";
 
 #define ARGV0 "ddnsd-snapd: "
 #define FATAL "ddnsd-snapd: fatal: "
@@ -54,6 +57,10 @@ static int flagdumpasap = 0;
 static int flagchanged = 0;
 static int flagchildrunning = 0;
 static int flagsighup = 0;
+
+/* how long to wait until dumping the data */
+/* XXX this should be configurable */
+static int dumpfreq = 1000;
 
 void die_nomem(void)
 {
@@ -77,7 +84,7 @@ void sigchld()
   wait(NULL);
   flagchildrunning = 0;
   /* try duming again in 23 seconds */
-  alarm(23);
+  alarm(dumpfreq);
 }
 
 // XXX should be unified with ddns-ipfwo ...
@@ -133,6 +140,8 @@ void handle_line(stralloc *sa, char action)
 /* filedandler for fill_db() */
 int readfileintodb(char *file, time_t ctime)
 {
+  uint32 uid   =  0;
+  uint32 t;
   int fd;
   int match = 1;
   int linenum;
@@ -171,17 +180,17 @@ int readfileintodb(char *file, time_t ctime)
   return 0;
 }
 
+
 /* fill database form filesystem */
 void fill_db()
 {
-  // XXX
+  // XXX: Fixme
   buffer_putsflush(buffer_2, ARGV0 "reading directory database\n");
   traversedirhier("/var/service/ddnsd/root/dot", readfileintodb);
   flagchanged++;
   flagdumpasap++;
   buffer_putsflush(buffer_2, ARGV0 "done\n");
 }
-
 
 
 void doit()
@@ -194,7 +203,7 @@ void doit()
   linenum = 0;
 
   /* try duming data in 23 seconds */
-  alarm(23);
+  alarm(dumpfreq);
 
   buffer_putsflush(buffer_2, ARGV0 "entering main loop\n");
 
@@ -245,6 +254,7 @@ int main(int argc, char **argv)
     strerr_die2x(111, FATAL, "$UID not set");
   scan_ulong(x,&id);
 
+  /* undocumented feature */
   if(id == 0)
     if(!env_get("IWANTTORUNASROOTANDKNOWWHATIDO"))
       strerr_die2x(111, FATAL, "unable to run under uid 0: please change $UID");
