@@ -21,7 +21,7 @@ and dorps it privileges to user
 and group
 .IR $GID .
 .P
-It then listens for incomming dns on port 53.
+It then listens for incomming dns querys on port 53 UDP.
 .P
 To answer querys 
 .B filedns
@@ -31,7 +31,7 @@ to the dns tree. This means that information for
 is searched in the file
 .IR /cx/rc23/dyn/drt .
 .P
-The format of this file is described in 
+The format of this files is described in 
 .IR ddnsd-file (5).
 .P
 Recursive querys are discarded, querys for files/names which
@@ -42,13 +42,19 @@ filedns can't find are answered with NXDOMAIN.
 is able to handle this well.
 .P
 .SH BUGS
-The handling of authority is broken.
+The handling of authority is broken. A lot of other stuff is
+broken. It delivers all the time not only the Information but
+two additional TXT records "this is a response from an alpha
+quality dns-server", "filednes 0.00 - if problems arise
+contact drt@un.bewaff.net".
+.B filedns
+is not fully RfC complient.
 .P
 .SH AUTHOR
 .B filedns
-is written by Doobee R. Tzeck <drt@ailis.de> heaviely 
+is written by Doobee R. Tzeck <drt@un.bewaff.net> heaviely 
 borrowing code from Dan Bernsteins walldns.
 .P
 .SH SEE ALSO
-multilog(8), ddns-clientd(8), ddnsd-data(8),
-http://rc23.cx/ddns/
+multilog(8), ddnsd-data(8),
+http://un.bewaff.net/ddns/

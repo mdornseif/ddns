@@ -1,6 +1,7 @@
 .TH ddns-cleand-conf 8
 .SH NAME
-ddns-cleand-conf \- set up ddns-cleand for use with supervise/svscan
+ddns-cleand-conf \- set up ddns-cleand(8) for use with supervise
+and svscan
 .SH SYNOPSIS
 .B ddns-cleand-conf
 .I acct logacct D ddnsddir 
@@ -32,7 +33,9 @@ to chroot to
 and to run under the uid and gid of 
 .IR acct .
 .I ddnsddir
-is the directory hierachy where ddns is 
+is the directory hierachy where
+.BR ddns (8)
+is 
 .IR chroot () ed 
 too, typically /service/ddnsd/root/.
 .I acct 
@@ -53,14 +56,14 @@ The name
 .I logacct 
 must not contain any special characters. 
 .SH AUTHOR
-Doobee R. Tzeck <drt@ailis.de> - http://rc23.cx/
+Doobee R. Tzeck <drt@un.bewaff.net> 
 .SH SEE ALSO
 ddns-cleand(8),
-filedns-conf(8),
 ddnsd-conf(8),
 supervise(8),
 svc(8),
 svscan(8),
 multilog(8),
 tai64nlocal(8),
-envuidgid(8)
+envuidgid(8),
+http://un.bewaff.net/ddns/

@@ -5,37 +5,49 @@ actual IPs of ddns users.
 .SH SYNOPSIS
 .B ddnsd-ipfwo.linux
 .SH DESCRIPTION
-.B ddnsd-ipfwo.linux 
-XXX
+.B ddnsd-ipfwo.linux
+rewrites dynamically firewall rules on Linux 2.2 ipchains to
+restrict access to certain services on the host running
+.BR ddnsd (8).
 .P
-.B Upon startup 
+Upon startup 
 .B ddns-ipfwo.linux
 will 
 .IR chroot (3)
 to the directory
-.IR $WORKDIR / tracedir .
+.IR $WORKDIR /tracedir.
 It then drops privileges to the group set by
 .IR $GID .
+It also tries to drop capabilities to just keep
+.I CAP_NET_ADMIN .
 All files will be created with the owner set by 
 .IR $UID .
 .P
 .B ddnsd-ipfwo.linux  
 will create a firewall chain called 
 .I ddns-ok 
-and add 
-a rule to this chain which will ACCEPT all traffic.
-If the chain ddna-ok already exists no modifications 
-will be made to this chain.
+and add a rule to this chain which will ACCEPT all traffic.
+If the chain
+.I ddns-ok
+already exists no modifications 
+will be made to this chain upon startup.
+The same wil be done for a chain
+.I ddns-ko
+which rejects all traffic.
 .P
 It creates a chain 
 .I ddns 
 or flushes it, if it already exists. 
+The default rule for this chain is to jump to the chain
+.IR ddns-ko .
+.P
 .B ddnsd-ipfwo.linux  
 creates a named pipe called 
-.I ddns-ipfwo.linux
+.IR /ddns-ipfwo.linux
 and listens for input acording to 
 .BR ddns-pipe (5)
-on this fifo.
+on this fifo. 
+.P
 For every 
 .I SETENTRY
 command it will add an entry to the
@@ -51,7 +63,7 @@ and
 command ddns will remove the corrospondending rule.
 .P 
 .I RENEWENTRY 
-commands are ignored.
+and all other commands are ignored.
 .P
 .I ddns-ipfwo.linux
 logs to stderr and is well suited to run together with
@@ -60,11 +72,13 @@ under
 .IR svscan (8).
 .SH BUGS
 .I ddns-ipfwo.linux
-doesn't clean rules upon exiting;; it doesn't even remove its fifo.
+doesn't clean rules upon exiting; it doesn't even remove its fifo.
 .I ddns-ipfwo.linux
 should read in all 
 .IR ddns-file (8) 
 data upon startup and create firewall rules accordingly.
+.P
+Alltogether it is buggy all over  the place - don't use it.
 .P
 .I ddns-ipfwo.linux
 runs as root to be able to change the firewall rules. This is a security risk -
@@ -72,8 +86,8 @@ ddns should at least drop capabilitys to just
 .IR CAP_NET_ADMIN.
 .P
 .SH AUTHOR
-Doobee R. Tzeck <drt@ailis.de>
+Doobee R. Tzeck <drt@un.bewaff.net>
 .P
 .SH SEE ALSO
-multilog(8), ddns-clientd(8), ddnsd-data(8),
-http://rc23.cx/ddns/
+multilog(8), ddns-pipe(5), ddnsd(8),
+http://un.bewaff.net/ddns/

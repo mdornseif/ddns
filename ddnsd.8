@@ -14,9 +14,9 @@ expects to be called for each network connection according to the
 .I ucspi-tcp 
 .IR interface .
 This can be done by using 
-.IR tcpserver (8).
+.IR tcpserver (1).
 .P
-.B Upon startup 
+Upon startup 
 .B ddnsd
 will 
 .IR chroot (3)
@@ -40,11 +40,18 @@ should be created with
 .IR ddnsd-data (8)
 .P
 If the user is found 
-.I ddnsd creates a file in 
+.I ddnsd
+creates a file in 
 .I /datadir 
 named like the username found in 
 .I data.cdb.
 The client gets send an acknowledgment via stdout.
+.P
+.B ddnsd
+notifies all fifos in
+.I /tracedir
+via the mechanism outlined by
+.BR ddns-pipe (5).
 .P
 The file creation is done like the 
 .I maildir algorythmn
@@ -67,7 +74,7 @@ an entry
 .B ddnsd
 removes the file.
 .P
-.B ddns-clientd
+.B ddnsd
 logs to stderr. 
 .BR multilog (8)
 is well suited for handling this.
@@ -82,8 +89,12 @@ udp as a transport, ttl is not dynamically used, files are left in /tmp
 and surly a lot other bugs.
 .SH AUTHOR
 .B ddns-identd
-is written by Doobee R. Tzeck <drt@ailis.de>
+is written by Doobee R. Tzeck <drt@un.bewaff.net>
 .P
 .SH SEE ALSO
-multilog(8), ddns-clientd(8), ddnsd-data(8),
-http://rc23.cx/ddns/
+multilog(8),
+ddns-clientd(8),
+ddnsd-data(8),
+ddnsd-pipe(5),
+ddnsd-file(5),
+http://un.bewaff.net/ddns/

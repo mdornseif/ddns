@@ -5,10 +5,13 @@ ddns-file \- file format used by the ddns system for on-disk storage
 .IR ddnsd (8)
 uses a file format to store information about its clients
 read by various tools like
-.IR filedns (8).
+.IR filedns (8)
+and
+.IR ddns-cleand (8).
 .P
 The file format can express IPv4, IPv6, DNS LOC records, 
 server specific data and comments.
+
 .SH "THE DDNSD FILE FORMAT"
 The filename defines the hostname of the data saved in the file.
 The file contains one or more lines.
@@ -86,8 +89,8 @@ readibility by humans.
 a lowercase letter. Up to now only 
 .I s
 is used by 
-.IR ddnsd (8).
-
+.IR ddnsd (8)
+to store complete records.
 .EX
      s1199,127.0.0.1,0:0:0:0:0:0:0:0,50 57 9.700 N 6 54 8.300 E 5700 5000 5000 1000,me.dyn.rc23.cx
 .EE
@@ -96,8 +99,10 @@ Each entry may contain extra spaces and tabs at the end of a line.
 Blank lines are allowed.
 .P
 .SH "AUTHOR"
-Doobee R. Tzeck <drt@ailis.de> is to blame for this.
+Doobee R. Tzeck <drt@un.bewaff.net> is to blame for this.
 .P
 .SH "SEE ALSO"
 ddnsd(8),
-ddns-cleand(8)
+ddns-cleand(8),
+ddns-pipe(5),
+http://un.bewaff.net/ddns/

@@ -30,13 +30,15 @@ upon reboot. You can use svc to control the service.
 .B filedns-conf
 arranges  
 .BR filedns (8) 
-to chroot to 
+to
+.BR chroot (3)
+to 
 .I ddnsddir
 and to run under the uid and gid of 
 .IR acct .
 .I ddnsddir
 is the directory hierachy ddns uses to output dns data,
-typically /service/ddnsd/root/dot/. 
+.IR /dot. 
 .P
 .I acct
 should be in the same group as the account used by
@@ -60,14 +62,13 @@ The name
 .I logacct 
 must not contain any special characters. 
 .SH AUTHOR
-Doobee R. Tzeck <drt@ailis.de> - http://rc23.cx/
+Doobee R. Tzeck <drt@un.bewaff.net>
 .SH SEE ALSO
 filedns(8),
-ddnsd-conf(8),
-ddns-cleand-conf(8),
 supervise(8),
 svc(8),
 svscan(8),
 multilog(8),
 tai64nlocal(8),
-envuidgid(8)
+envuidgid(8),
+http://un.bewaff.net/ddns/

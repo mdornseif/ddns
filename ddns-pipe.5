@@ -12,20 +12,19 @@ via named pipes.
 The format can express IPv4, IPv6, DNS LOC, uid and hostname data beeing
 added, removed and expired. It also can express renewing uids.  
 .SH "THE DDNS-PIPE FORMAT"
-A ddns-pipe command stream consists of commands seperated by 
-.IR \\n.
+A ddns-pipe command stream consists of commands seperated by newlines
+.IR \\n .
 Each line starts with a byte defining the command followed by an arbitary 
 amount of data bytes followd by a newline. The databytes can contain
 all values other then 
 .IR \\n.
 There are four types of commands
-(1) setentry; (2) killentry; (3) expireentry; (4) renewentry.
+(1) SETENTRY; (2) KILLENTRY; (3) EXPIREENTRY; (4) RENEWENTRY.
 .TP 5
 (1)
-A 
 .B setentry
 command begins with 
-.I `s'
+.I `s,'
 followed by a decimal userid followed by
 .IR `,' ,
 a dotted decimal IPv4 address,
@@ -39,56 +38,70 @@ and a hostname. For more Information on the LOC record see
 
 Example:
 .EX
-     s1199,127.0.0.1,0:0:0:0:0:0:0:0,50 57 9.700 N 6 54 8.300 E 5700 5000 5000 1000,me.dyn.rc23.cx
+     s,1199,127.0.0.1,0:0:0:0:0:0:0:0,50 57 9.700 N 6 54 8.300 E 5700 5000 5000 1000,me.dyn.rc23.cx
 .EE
 
-A setentry command is sent when ddnsd recived a new registration from a client.
+A
+.B SETENTRY
+command is sent when ddnsd recived a new registration from a client.
 
 .TP 5
 (2)
 A 
-.B killentry
+.B KILLENTRY
 command begins with 
-.I `k'
+.I `k,'
 followed by the same data as a 
-.I setentry 
+.I SETENTRY 
 command.
 
-A killentry command is sent when a client requested removal of its data.
+A
+.B KILLENTRY
+command is sent when a client requested removal of its data.
 
 .TP 5
 (3)
 A 
-.B expireentry
+.B EXPIREENTRY
 command begins with 
-.I `e'
+.I `e,'
 followed by the same data as a 
-.I setentry 
+.I SETENTRY 
 command.
 
-A expireentry command is sent when a the server removes client data. This is done by 
+A
+.B EXPIREENTRY
+command is sent when a the server removes client data. This is done by 
 .IR ddns-cleand (8).
 
 .TP 5
 (4) 
 A 
-.B renewentry
+.B RENEWENTRY
 command beginns with
-.I `r'
+.I `r,'
 followed by a decimal usreid.
 
 Example:
 .EX
-     r1199
+     r,1199
 .EE
 
-An renewentry command is send, when a client renews the leasetime of its entry.
+An
+.I RENEWENTRY
+command is send, when a client renews the leasetime of its entry.
+.P
+.SH "BUGS"
+Not all tools follow the definition given in this manpage. This
+is bad.
 .P
 .SH "AUTHOR"
-Doobee R. Tzeck <drt@ailis.de> is to blame for this.
+Doobee R. Tzeck <drt@un.bewaff.net> is to blame for this.
 .P
 .SH "SEE ALSO"
 ddnsd(8),
 ddns-cleand(8),
 ddns-snapd(8),
-ddns-ipfwo(8)
+ddns-ipfwo(8),
+ddns-file(5),
+http://un.bewaff.net/ddns/

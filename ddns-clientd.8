@@ -1,4 +1,4 @@
-.TH ddns-cleand 8
+.TH ddns-clientd 8
 .SH NAME
 ddns-clientd \- client for the ddns protocol
 .SH SYNOPSIS
@@ -20,13 +20,13 @@ enviroment variable
 and the shared secret from the enviroment variable
 .IR $KEY.
 .P
-If registration succedes the server answers with a 
+If registration succeedes the server answers with a 
 .I leasetime
 in which the client must renew his connection.
 .B ddns-clientd
 sleeps for 
-.IR leasetime -
-17 seconds, renews the registration and starts over sleeping.
+.I leasetime 
+minus 17 seconds, renews the registration and starts over sleeping.
 .P
 If 
 .B ddns-clientd
@@ -42,10 +42,15 @@ it will stop sleeping and renew it resistration imidiatly.
 .B IPv4 
 must be an dotted decimal IPv4 address or 
 .BR 0 .
+If you use the special value
+.I 0.0.0.1
+.BR ddns-clientd (8)
+will find out the IP-Address of your outgoing interface 
+and uses this one.
 .B IPv6
 must be a coloned hexadecimal IPv6 address or 
 .BR 0 . 
-The rest describes a location on the WGS84 elipsoid (think 
+The rest of the parameters describe a location on the WGS84 elipsoid (think 
 of it as the earth). The Format is mostly compatible with the
 Format used for 
 .I DNS LOC
@@ -54,7 +59,8 @@ recurce records in
 zone files which is described in
 .I RfC 
 .IR 1876 .
-The only difference is that distances are only allowed in centimeters.
+The only difference is that distances are only allowed to be
+expressed in centimeters.
 .P
 The first eight values describe 
 .I latitude
@@ -78,17 +84,17 @@ and
 .I vpre
 describe the horizontal and vertical precision of your data. 
 .I hpre 
-defaults to 1.000.000 cm and
+defaults to 1000000 cm and
 .I vpre
-to 1.000 cm. For a typical GPS reciver you should set 
+to 1000 cm. For a typical GPS reciver you should set 
 .I hpre 
 to 4000
 and 
 .I vpre 
-to 10000. vpre and hpre are optional.
+to 30000. vpre and hpre are optional.
 .P
 .B ddns-clientd
-logs to stderr. 
+logs to stdout. 
 .BR multilog (8)
 is well suited for handling this.
 .P
@@ -106,9 +112,9 @@ of the size of your city, country or the whole Earth.
 .P
 On errors 
 .B ddns-clientd
-prints out an error message to stderr and exits with a status of 111
+prints out an error message to stdout and exits with a status of 111
 if the error is in the initialisation and 100 if the error is network 
-related.
+related. Regular events are logged to stdout, too.
 .P
 .SH EXAMPLE
 An typical invocation might look like this:
@@ -117,10 +123,10 @@ ddns-clientd 0.0.0.1 1234::cdef 50 57 9.7 N 6 54 08.3 E 5700 5000 1500 5000
 .P
 If you really can't figure out where you are you can try
 .IP
-ddns-clientd 1.2.3.4 0 0 0 0.0 N 0 0 0.0 E 1000 2000000000 2000000000 300000
+ddns-clientd 0.0.0.1 0 0 0 0.0 N 0 0 0.0 E 1000 2000000000 2000000000 300000
 .SH AUTHOR
 .B ddns-identd
-is written by Doobee R. Tzeck <drt@ailis.de>
+is written by Doobee R. Tzeck <drt@un.bewaff.net>
 .SH SEE ALSO
-multilog(8), ddnsd(8),
-http://rc23.cx/ddns/
+multilog(8), ddnsd(8), ddns-prot(5),
+http://un.bewaff.net/ddns/

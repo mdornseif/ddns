@@ -5,10 +5,10 @@ ddnsd-data \- produce data.cdb for ddnsd(8)
 .B ddnsd-data
 .SH DESCRIPTION
 .B ddnsd-data
-created data.cdb for 
+creates data.cdb for 
 .IR ddnsd (8)
 .P
-.B ddnsd -data
+.B ddnsd-data
 reads a set of lines from stdin describing user records for
 ddnsd one per line. It then creates a 
 .I data.cdb
@@ -46,36 +46,40 @@ and
 .P 
 The third field is the shared secret between client and server.
 It has to be 32 byte long and should contain 256 bits of entropy.
-If you want to use byte values which have no ascii representation you 
+If you want to use byte values which have no ascii representation
+or are represented by `,' or `\\n' you 
 can escape ocatal values by a backslash. The format is 
 .I \\\\xxx 
 where 
 .I xxx represents a three digit octal number in the range 0-277.
 You are not allowed to use less then three digits.
-.P if the shared secret is shorter than 32 bytes 
-.B ddnsd-data will extend it by repeating it until there are 32 bytes.
+.P
+If the shared secret is shorter than 32 bytes 
+.B ddnsd-data
+will extend it by repeating it until there are 32 bytes.
 This degenetartes entropy in the key material and therefore the security.
 .P
-The third field ist the leasetime. this means the timespan in
+The third field ist the leasetime. This means the timespan in
 seconds in which the client has to renew it's entry. If this field is 
 left empty, a default value of 3600 will be used.
 .P
 On errors 
 .B ddnsd-data exits with a message and an error code of 111. 
 .SH BUGS
-No known bugs.
+.B ddnsd-data
+should support expression of RP records.
 .SH EXAMPLE
 .IR data :
 	 #uid,uname/hostn  ,key   ,ttl       
-	 1234,joecypherpunk,geheim,3600
+	 1234,joecypherpunk,gEhe1M,3600
 .P
 .IR invocation :
          $ ddnsd-data < data
 .P
 .SH AUTHOR
 .B ddns-identd
-is written by Doobee R. Tzeck <drt@ailis.de>
+is written by Doobee R. Tzeck <drt@un.bewaff.net>
 .P
 .SH SEE ALSO
 multilog(8), ddns-clientd(8), ddnsd(8),
-http://rc23.cx/ddns/
+http://un.bewaff.net/ddns/
