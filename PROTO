@@ -1,0 +1,188 @@
+ddnsd is a protocol designed to update information of dynamic/mobile
+clients to a central server. It could be thought of as an dynamic
+dns system but can be used for other purposes like access control.
+
+Before designing ddns I evaluated other dynamic dns systems. Many of
+the older ones are closed down, because they couldn't keep up with the
+demand. Therefore ddns should be sufficient leightweight to support
+houndertthousand users on a medium sized machine. Most of the dynamic
+dns systems use some combination of http/cgi for updating which is
+slow and resource heavy. Most system transmit date in the clear or
+even use cleartext passwords.
+
+The designgoals of ddns were
+
+* use strong encryption for all communication
+* support IPv4 and IPv6
+* support transmission of location (for DNS LOC)
+* don't break because of the y2.038k probem 
+* use only a minimum amount of data
+* work with tcp or udp (it isn't tuned for udp up to now)
+* work efficient on high latency lines       
+
+
+-----[ Encryption ]-----
+
+ddns uses datapackets with 68 Bytes size consisting of a 32 bit userid
+and a 512 rijndael encrypted payload.
+
+the payload is encrypted as two bolcks of 256 bit encrypted in ECB
+mode with the same 256 bit key. I didn't use chaining because this would
+incerase the size of the packets.
+
+To make known plaintext attacks harder the payload contains at least
+16 bits of random data in the first and the second half of the (512
+bit) packet so both (256 bit) rijndael blocks get some entropy.
+
+To counter replay attacks each datapacket contains a timestamp with
+high resulution and a 16 bit random number must be present in the first and
+in the second half so bombining blocks of different packages isn't
+easy.
+
+The packets contain a 32 bit magic token to check if decryption
+contained something sensible. If a packet encrypts to something
+sensibe the user is authentificated.
+
+-----[ Overviev ]-----
+
+The user of the client and the operater of the Server are
+expected to have negotiated a 32 bit userid, a 256 bit shared
+secret and the (domain) name under which the Entry of the user will be
+registerd. If the userinterface allowes to use secrets shorter than 32
+bytes the secret should be padded by repeating itself until 32 bytes
+are reached.
+
+When comming online the client will send a SETENTRY request to the
+server. The server replies stating success or not and the leasetime.
+
+The leasetime means the number of seconds in which the client has to
+send a renewrequest or the server will delete the entry of the
+client.
+
+A RENEWENTRY request is answered by the same type of replypacket
+then the SETENTRY request. The leasetime may be differ from the
+leasetime(s) send before. If the leasetime is 0 the client is
+recuested to keep the same leasetime as before.
+
+Before leaving the network/changing IP or something along this lines
+the client sends a KILLENTRY request. The server will remove the entry
+of the client and send a reply.
+ 
+All data is expected to be in network byte order. The ip adresses are
+considered strings of bytes.
+
+-----[ The Request Racket ]-----
+
+A request packet looks like this:
+
+        +-------------------------------------------+
+	|                   uid                     |
+        +-------------------------------------------+
+
+        0          8         16          24          32
+        +--------------------+----------------------+
+      0 |         type       |        random1       |
+        +--------------------+----------------------+
+     32 |                   magic                   |
+        +-------------------------------------------+
+     64 |                    ip4                    |
+        +-------------------------------------------+
+     96 |                                           |
+        |                    ip6                    |
+        |                                           |   
+        |                                           |
+        +----------+----------+----------+----------+
+    224 | reserved | loc_size | loc_hpre | loc_vpre |
+        +----------+----------+----------+----------+
+    256 |                  loc_lat                  |
+ --     +-------------------------------------------+  --
+    288 |                 loc_long                  |
+        +-------------------------------------------+
+    320 |                  loc_alt                  |
+        +---------------------+---------------------+
+    352 |       random2       |     reserved2       |
+        +---------------------+---------------------+
+    382 |                 timestamp                 |
+        |                                           |
+        +-------------------------------------------+
+
+uid     	a 32 bit non zero integer containing the id of the 
+		user. This is the only date transmitted in plaintext.
+
+type    	a 16 bit packet type. See below.
+
+random1, 	random data for crypt reasons (see above) random1
+random2		must contain the same 16 bit value. This has to be 
+		checked by the server. If they differ, this may be
+		considered as an attack condition.
+
+magic		a 32 bit value identifing dmailb has to be 0xC0DECAFE.
+		If this contains an other value this may be
+		interpreted as an failed decryption.
+	
+ip4		a 32 bit IPv4 address as a string of bytes
+
+ip6		a 128 bit IPv6 address as a string of bytes
+
+reserved,	reserved for further use. Should be filled with random
+reserved2	by the client for now.
+
+loc_*           the location of the client in notion of a DNS LOC
+		record. If the client doesn't want to reveal his
+		position he is asked to define the whole earth as the
+		area he is in. If this can't be done all values may be
+		set to zero. 
+
+timestamp  	a 128 bit high precision timestamp inspired from DJBs
+		libtai struct taia. it consists of a uint64 for
+		seconds, and two uint32s for nano and atto seconds.
+		if attoseconds are not available on the clientside 
+		the client may fill this with random data.
+
+
+
+-----[ The Reply Packet ]-----
+
+
+        +-------------------------------------------+
+	|                   uid                     |
+        +-------------------------------------------+
+ 
+        0          8         16          24          32
+        +---------------------+---------------------+
+      0 |        type         |       random1       |
+        +---------------------+---------------------+
+     32 |                   magic                   |
+        +-------------------------------------------+
+     64 |                 leasetime                 |
+        +-------------------------------------------+
+     96 |                                           |
+        |                                           |
+        |                                           |
+        |                 reserved                  |
+ __     |                                           |  __
+        |                                           |
+        |                                           |
+        |                                           |
+        +---------------------+---------------------+
+    352 |       random2       |      reserved       |
+        +---------------------+---------------------+
+    384 |                 timestamp                 |
+        |                                           |
+        +-------------------------------------------+      
+
+type, random1, random2, magic, and timestamp are the same as in the
+request packet.
+
+leasetime 	a uint32 defining that the server will delete the
+		Entry of UID at imestamp + leasetime if the client
+      		hasn't sent a RENEWENTRY until then.
+		If leasetime is zero the client is asked to use the
+		leasetime of the last reply.
+
+reserved 	will be used in futeure for authenfication information
+		and should up to now filled with random data.
+
+-----[ Packet Types ]-----
+
+... to follow, see ddns.h
