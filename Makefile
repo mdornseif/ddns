@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.14 2000/07/13 18:20:47 drt Exp $
+# $Id: Makefile,v 1.15 2000/07/14 21:16:48 drt Exp $
 
 DOWNLOADER = "wget"
 
@@ -12,23 +12,22 @@ daemon: libs ddnsd ddnsd-data ddns-cleand filedns
 
 client: libs ddns-clientd
 
-ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o rijndael.o \
-iso2txt.o mt19937.o dnscache.a libtai.a 
-	gcc -o $@ $^
+ddnsd: ddns.h ddnsd.o dnscache.a libtai.a drtlib.a djblib.a
+	gcc -o $@ ddnsd.o dnscache.a libtai.a drtlib.a djblib.a
 
-ddns-cleand: ddns-cleand.o scan_xlong.o \
-sig_alarm.o sig_block.o sig_catch.o now.o dnscache.a libtai.a 
-	gcc -o $@ ddns-cleand.o scan_xlong.o sig_alarm.o sig_block.o sig_catch.o now.o dnscache.a libtai.a 
+ddns-cleand: ddns.h ddns-cleand.o dnscache.a libtai.a drtlib.a djblib.a
+	gcc -o $@ ddns-cleand.o dnscache.a libtai.a drtlib.a djblib.a
 
-ddns-clientd: ddns-clientd.o ddnsc.o loc.o fmt_xint.o fmt_xlong.o rijndael.o mt19937.o pad.o txtparse.o dnscache.a libtai.a sig_int.o \
-sig.o sig_catch.o sig_block.o sig_term.o sig_alarm.o fd_move.o fd_copy.o timeoutconn.o dnscache/ndelay_off.o
-	gcc -o $@ $^
+ddns-clientd: ddns.h ddns-clientd.o ddnsc.o dnscache.a libtai.a \
+drtlib.a djblib.a dnscache/ndelay_off.o
+	gcc -o $@ ddns-clientd.o ddnsc.o dnscache.a libtai.a drtlib.a \
+	djblib.a dnscache/ndelay_off.o
 
 ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libtai.a
-	gcc -o $@ $^
+	gcc -o $@ ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libtai.a
 
-filedns: filedns.o server.o txtparse.o dnscache.a libtai.a
-	gcc -o $@ $^
+filedns: ddns.h filedns.o server.o txtparse.o dnscache.a libtai.a drtlib.a djblib.a
+	gcc -o $@ filedns.o server.o txtparse.o dnscache.a libtai.a drtlib.a djblib.a
 
 sig_block.o: sig_block.c hassgprm.h
 
@@ -46,7 +45,7 @@ trysgprm: trysgprm.o
 
 trysgact: trysgact.o
 
-libs: dnscache.a libtai.a
+libs: dnscache.a libtai.a drtlib.a djblib.a
 
 dnscache.a:
 	if [ ! -d dnscache ]; then \
@@ -72,6 +71,16 @@ libtai.a:
 	make; \
 	grep -l ^main *.c | perl -npe 's/^(.*).c/\1.o/;' | xargs rm -fv; \
 	ar cr ../libtai.a *.o; 	
+
+djblib.a: buffer_0.o fd.h fd_copy.o fd_move.o fmt_xint.o fmt_xlong.o \
+now.o open_excl.o scan_xlong.o sig.o sig_alarm.o sig_block.o sig_catch.o \
+sig_int.o sig_term.o timeoutconn.o
+	ar cr djblib.a buffer_0.o fd_copy.o fd_move.o fmt_xint.o \
+	fmt_xlong.o now.o open_excl.o scan_xlong.o sig_alarm.o sig_block.o \
+	sig_catch.o timeoutconn.o sig.o sig_int.o sig_term.o
+
+drtlib.a: iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
+	ar cr drtlib.a iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
 
 clean:
 	rm -f *.o ddnsd ddnsd-data ddns-clientd filedns hassgprm.h hassgact.h *.a
