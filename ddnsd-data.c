@@ -1,18 +1,19 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include "buffer.h"
+#include "byte.h"
+#include "cdb_make.h"
+#include "exit.h"
+#include "fmt.h"
+#include "getln.h"
+#include "open.h"
+#include "readwrite.h"
+#include "str.h"
+#include "stralloc.h"
+#include "strerr.h"
 #include "uint16.h"
 #include "uint32.h"
-#include "str.h"
-#include "byte.h"
-#include "fmt.h"
-#include "exit.h"
-#include "readwrite.h"
-#include "buffer.h"
-#include "strerr.h"
-#include "getln.h"
-#include "cdb_make.h"
-#include "stralloc.h"
-#include "open.h"
 
 #define TTL_NS 259200
 #define TTL_POSITIVE 86400
@@ -91,7 +92,7 @@ void rr_finish(char *owner)
     owner += 2;
     result.s[2] = '*';
   }
-    //  if (!stralloc_copyb(&key,owner,dns_domain_length(owner))) nomem();
+  //  if (!stralloc_copyb(&key,owner,dns_domain_length(owner))) nomem();
   //case_lowerb(key.s,key.len);
 }
 
@@ -196,6 +197,11 @@ main()
       scan_ulong(f[0].s,&uid); 
       txtparse(&f[2]);
       pad(&f[2], 16);
+
+      if(uid == 0)
+	{
+	  strerr_die2x(111, FATAL, "uid 0 not allowed");
+	}
       
       stralloc_ready(&key, sizeof(uint32));
       uint32_pack(key.s, uid);

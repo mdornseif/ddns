@@ -1,8 +1,11 @@
-/* $Id: ddnsd.c,v 1.9 2000/04/30 15:59:26 drt Exp $
+/* $Id: ddnsd.c,v 1.10 2000/04/30 23:03:18 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.10  2000/04/30 23:03:18  drt
+ * Unknown user is now communicated by using uid == 0
+ *
  * Revision 1.9  2000/04/30 15:59:26  drt
  * cleand up usage of djb stuff
  *
@@ -166,6 +169,7 @@ void dump_packet(struct ddnsrequest *p, char *info)
   
 }
 
+/* returns 1 when found, 0 when unknown user */
 int ddnsd_find_user(struct ddnsrequest *p, stralloc *sa)
 {
   struct cdb c;
@@ -201,11 +205,13 @@ int ddnsd_find_user(struct ddnsrequest *p, stralloc *sa)
   else
     {
       /* can't find id */
-      ddnsd_send_err(p->uid, DDNS_T_EUNKNOWNUID, "unknown user");
+      return 0;
     }
 
   cdb_free(&c);
   close(fd);
+
+  return 1;
 }
 
 
@@ -223,34 +229,43 @@ int ddnsd_recive(struct ddnsrequest *p)
 
   uint32_unpack((char*) &ptmp.uid, &p->uid);
   
-  ddnsd_find_user(p, &data);
-
-  key = data.s;
-  stralloc_copyb(&username, &data.s[16], data.len-16);
-
-  /* initialize rijndael with 256 bit blocksize and 128 bit keysize */
-  rijndaelKeySched(8, 4, key);
-  
-  /* decrypt with rijndael */
-  rijndaelDecrypt((char *) &ptmp.type);
-  rijndaelDecrypt((char *) &ptmp.type + 32);
-
-  uint16_unpack((char*) &ptmp.type, &p->type);
-  uint32_unpack((char*) &ptmp.magic, &p->magic);
-  uint32_unpack((char*) &ptmp.ip4, &p->ip4);
-  taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
-  uint32_unpack((char*) &ptmp.loc_lat, &p->loc_lat);
-  uint32_unpack((char*) &ptmp.loc_long, &p->loc_long);
-  uint32_unpack((char*) &ptmp.loc_alt, &p->loc_alt);
-
-  dump_packet(p, "entpackt");
-
-  if(p->magic != DDNS_MAGIC)
+  if(ddnsd_find_user(p, &data))
     {
-      ddnsd_send_err(p->uid, DDNS_T_EWRONGMAGIC, "wrong magic");
+      key = data.s;
+      stralloc_copyb(&username, &data.s[16], data.len-16);
+      
+      /* initialize rijndael with 256 bit blocksize and 128 bit keysize */
+      rijndaelKeySched(8, 4, key);
+      
+      /* decrypt with rijndael */
+      rijndaelDecrypt((char *) &ptmp.type);
+      rijndaelDecrypt((char *) &ptmp.type + 32);
+      
+      uint16_unpack((char*) &ptmp.type, &p->type);
+      uint32_unpack((char*) &ptmp.magic, &p->magic);
+      uint32_unpack((char*) &ptmp.ip4, &p->ip4);
+      taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
+      uint32_unpack((char*) &ptmp.loc_lat, &p->loc_lat);
+      uint32_unpack((char*) &ptmp.loc_long, &p->loc_long);
+      uint32_unpack((char*) &ptmp.loc_alt, &p->loc_alt);
+      ptmp.loc_size, p->loc_size;
+      ptmp.loc_vpre, p->loc_hpre;
+      ptmp.loc_hpre, p->loc_vpre;
+      
+      dump_packet(p, "entpackt");
+      
+      if(p->magic != DDNS_MAGIC)
+	{
+	  ddnsd_send_err(p->uid, DDNS_T_EWRONGMAGIC, "wrong magic");
+	}
+      
+      return p->type;
     }
-  
-  return p->type;
+  else
+    {      
+      ddnsd_send_err(0, DDNS_T_EUNKNOWNUID, "unknown user");
+    }
+
 }
 
 /* handle a setentryrequest */

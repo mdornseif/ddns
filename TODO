@@ -1,8 +1,5 @@
 * clean up sourcecode
 * ipv6 support
-* fix build process. At the moment one has to do "cd djblib; make;
-  cd ../lib; make; cd .." before building.
-* fix Makefiles
 * set paranoid umasks
 * checking connection between source ip and requesting ip
 * clean up log messages
@@ -13,12 +10,12 @@
 * entropy gatherer/password creator
 * clean up error codes
 * -Wall
-* check for endianess
 * fix tai encapsulation
 * checking timestamps
 * dynamic leasetime
 * driver for ddnsc
 * ddnsc: reading passwd from enviroment
 * ddnsd: chrooting
+* change magic to detect endianess issues
 * update protocoll for udp
-* handle timeouts smater
+* handle timeouts/short reads/writes smarter

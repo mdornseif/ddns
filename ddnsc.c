@@ -1,8 +1,11 @@
-/* $Id: ddnsc.c,v 1.6 2000/04/30 15:59:26 drt Exp $
+/* $Id: ddnsc.c,v 1.7 2000/04/30 23:03:18 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.7  2000/04/30 23:03:18  drt
+ * Unknown user is now communicated by using uid == 0
+ *
  * Revision 1.6  2000/04/30 15:59:26  drt
  * cleand up usage of djb stuff
  *
@@ -38,7 +41,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsc.c,v 1.6 2000/04/30 15:59:26 drt Exp $";
+static char rcsid[] = "$Id: ddnsc.c,v 1.7 2000/04/30 23:03:18 drt Exp $";
 
 #define FATAL "ddnsc: "
 
@@ -151,6 +154,10 @@ int ddnsc_recive(struct ddnsreply *p)
   taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
   tai_unpack((char*) &ptmp.leasetime, &p->leasetime);
 
+  if(p->uid == 0)
+    {
+        strerr_die1x(100, "user unknown to server"); 
+    }
 
   if(p->magic != DDNS_MAGIC)
     {
