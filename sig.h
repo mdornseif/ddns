@@ -1,55 +1,36 @@
-/* $Id: sig.h,v 1.1 2000/05/02 06:23:57 drt Exp $
+/* $Id: sig.h,v 1.2 2000/07/12 11:51:48 drt Exp $ 
+ *   --drt@ailis.de
  *
- * This is Software based on code of Dan Bernstein,
- * but since I messed with it please do not bother Dan
- * with questions regarding this stuff.
- *                               --- drt@ailis.de
- * $Log: sig.h,v $
- * Revision 1.1  2000/05/02 06:23:57  drt
- * ddns-cleand added
- *
+ * mix from misc DJB software
  */
 
 #ifndef SIG_H
 #define SIG_H
 
-extern void sig_catch();
-extern void sig_block();
-extern void sig_unblock();
-extern void sig_blocknone();
-extern void sig_pause();
+extern int sig_alarm;
+extern int sig_child;
+extern int sig_cont;
+extern int sig_hangup;
+extern int sig_pipe;
+extern int sig_term;
 
-extern void sig_dfl();
+extern void (*sig_defaulthandler)();
+extern void (*sig_ignorehandler)();
 
-extern void sig_miscignore();
-extern void sig_bugcatch();
+extern void sig_catch(int,void (*)());
+#define sig_ignore(s) (sig_catch((s),sig_ignorehandler))
+#define sig_uncatch(s) (sig_catch((s),sig_defaulthandler))
 
-extern void sig_pipeignore();
-extern void sig_pipedefault();
+extern void sig_block(int);
+extern void sig_unblock(int);
+extern void sig_blocknone(void);
+extern void sig_pause(void);
 
-extern void sig_contblock();
-extern void sig_contunblock();
-extern void sig_contcatch();
-extern void sig_contdefault();
+extern void sig_dfl(int);
 
-extern void sig_termblock();
-extern void sig_termunblock();
-extern void sig_termcatch();
-extern void sig_termdefault();
-
-extern void sig_alarmblock();
-extern void sig_alarmunblock();
-extern void sig_alarmcatch();
-extern void sig_alarmdefault();
-
-extern void sig_childblock();
-extern void sig_childunblock();
-extern void sig_childcatch();
-extern void sig_childdefault();
-
-extern void sig_hangupblock();
-extern void sig_hangupunblock();
-extern void sig_hangupcatch();
-extern void sig_hangupdefault();
-
+void sig_termcatch(f) void (*f)(); { sig_catch(SIGTERM,f); }
+void sig_alarmblock() { sig_block(SIGALRM); }
+void sig_alarmunblock() { sig_unblock(SIGALRM); }
+void sig_alarmcatch(f) void (*f)(); { sig_catch(SIGALRM,f); }
+void sig_alarmdefault() { sig_catch(SIGALRM,SIG_DFL); }
 #endif
