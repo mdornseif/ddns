@@ -1,5 +1,5 @@
-/* $Id: ddnsd.c,v 1.21 2000/08/02 20:13:22 drt Exp $
- *   --drt@ailis.de
+/* $Id: ddnsd.c,v 1.22 2000/11/21 19:46:08 drt Exp $
+ *   --drt@un.bewaff.net
  *
  * server for ddns - this file is to long
  * 
@@ -8,6 +8,9 @@
  * (K)allisti
  *
  * $Log: ddnsd.c,v $
+ * Revision 1.22  2000/11/21 19:46:08  drt
+ * Updated IP-Address
+ *
  * Revision 1.21  2000/08/02 20:13:22  drt
  * -V
  *
@@ -119,7 +122,7 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.21 2000/08/02 20:13:22 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.22 2000/11/21 19:46:08 drt Exp $";
 
 #define ARGV0 "ddnsd: "
 
