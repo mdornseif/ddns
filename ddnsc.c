@@ -1,8 +1,11 @@
-/* $Id: ddnsc.c,v 1.11 2000/07/14 23:57:56 drt Exp $
+/* $Id: ddnsc.c,v 1.12 2000/07/29 21:47:26 drt Exp $
  *
- * client for ddns
+ * handle basic ddns protocol client server communication
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.12  2000/07/29 21:47:26  drt
+ * ddns_pack() now handels creation of network data
+ *
  * Revision 1.11  2000/07/14 23:57:56  drt
  * Added documentation in README and manpage for
  * ddns-clientd, rewriting of 0.0.0.1 in ddns-cliend
@@ -62,46 +65,43 @@
 #include "timeoutread.h"
 #include "timeoutwrite.h"
 
+#include "ddns_pack.h"
 #include "mt19937.h"
 #include "rijndael.h"
 #include "loc.h"
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsc.c,v 1.11 2000/07/14 23:57:56 drt Exp $";
+static char rcsid[] = "$Id: ddnsc.c,v 1.12 2000/07/29 21:47:26 drt Exp $";
 
-#define FATAL "ddns-client: "
+#define FATAL "ddns-clientd: "
 
 /* read, decode and decrypt packet */
 int ddnsc_recive(struct ddnsreply *p)
 {
   int r;
-  struct ddnsreply ptmp = {0};
+  char tmp[DDNSREPLYSIZE];
 
-  r = timeoutread(120, 6, &ptmp, sizeof(struct ddnsreply));
-  if(r != 68)
-    strerr_die2x(100, FATAL, "wrong packetsize");
-  
-  uint32_unpack((char*) &ptmp.uid, &p->uid);
-  
-  /* XXX: check for my own userid */
-  
+  r = timeoutread(120, 6, tmp, DDNSREPLYSIZE);
+  if(r != DDNSREPLYSIZE)
+    strerr_die2sys(100, FATAL, "wrong packetsize: readerror/protocolerror: ");
+    
   /* the key should be set up by ddnsc_send already */
-  
   /* decrypt with rijndael */
-  rijndaelDecrypt((char *) &ptmp.type);
-  rijndaelDecrypt((char *) &ptmp.type + 32);
+  rijndaelDecrypt(tmp + 4);
+  rijndaelDecrypt(tmp + 36);
 
-  uint16_unpack((char*) &ptmp.type, &p->type);
-  uint32_unpack((char*) &ptmp.magic, &p->magic);
-  taia_unpack((char*) &ptmp.timestamp, &p->timestamp);
-  uint32_unpack((char*) &ptmp.leasetime, &p->leasetime);
+  /* XXX: check for my own userid */
+  uint32_unpack_big(tmp, &p->uid);
+  ddnsreply_unpack_big(tmp, p);
 
   if(p->uid == 0)
     strerr_die2x(100, FATAL, "user unknown to server"); 
 
   if(p->magic != DDNS_MAGIC)
     strerr_die2x(100, FATAL, "wrong magic");
+
+  /* XXX: check timestamp etc */
   
   return p->type;
 }
@@ -109,38 +109,30 @@ int ddnsc_recive(struct ddnsreply *p)
 /* fill p with random, timestamp, magic, encrypt it and send it */
 static void ddnsc_send(struct ddnsrequest *p, char *key)
 {
-  struct taia t;
-  struct ddnsrequest ptmp = {0};
+  stralloc sa = { 0 };
 
   /* fill our structure */
   /* and get it into network byte order */
   p->magic = DDNS_MAGIC;
-  taia_now(&t);
-  taia_pack((char *) &ptmp.timestamp, &t);
-  uint32_pack((char*) &ptmp.uid, p->uid);
-  uint32_pack((char*) &ptmp.magic, p->magic);
-  byte_copy(&ptmp.ip4[0], 4, p->ip4);
-  byte_copy(&ptmp.ip6[0], 16, p->ip6);
-  uint16_pack((char*) &ptmp.type, p->type);
-  uint32_pack((char*) &ptmp.loc_lat, p->loc_lat);
-  uint32_pack((char*) &ptmp.loc_long, p->loc_long);
-  uint32_pack((char*) &ptmp.loc_alt, p->loc_alt);
-  ptmp.loc_size = p->loc_size;
-  ptmp.loc_hpre = p->loc_hpre;
-  ptmp.loc_vpre = p->loc_vpre;
-  ptmp.random1 = ptmp.random2 = randomMT() & 0xffff;
+  taia_now(&p->timestamp);
+  p->random1 = p->random2 = randomMT() & 0xffff;
   /* fill reserved with random data */
-  ptmp.reserved1 = randomMT() & 0xff;;
-  ptmp.reserved2 = randomMT() & 0xffff;
+  p->reserved1 = randomMT() & 0xff;;
+  p->reserved2 = randomMT() & 0xffff;
+
+  stralloc_readyplus(&sa, 4);
+  uint32_pack_big(sa.s, p->uid);
+  sa.len += 4;
+  ddnsrequest_pack_big(&sa, p);
 
   /* initialize rijndael with 256 bit blocksize and 256 bit keysize */
   rijndaelKeySched(8, 8, key);
     
   /* Encrypt with rijndael */
-  rijndaelEncrypt((char *) &ptmp.type);
-  rijndaelEncrypt((char *) &ptmp.type + 32);  
+  rijndaelEncrypt(sa.s + 4);
+  rijndaelEncrypt(sa.s + 36);  
 
-  if(timeoutwrite(60, 7, &ptmp, sizeof(struct ddnsrequest)) != 68)
+  if(timeoutwrite(60, 7, sa.s, DDNSREQUESTSIZE) != DDNSREQUESTSIZE)
     strerr_die2sys(100, FATAL, "couldn't write to network: ");
 }
 
@@ -149,7 +141,7 @@ int ddnsc(int type, uint32 uid, char *ip4, char *ip6, struct loc_s *loc, char *k
 {
   struct ddnsrequest p = {0};
   struct ddnsreply r = {0};
-  
+     
   p.type = type;
   p.uid = uid;
   byte_copy(&p.ip4[0], sizeof(p.ip4), ip4);
