@@ -1,4 +1,4 @@
-/* $Id: traversedirhier.c,v 1.1 2000/07/29 21:24:05 drt Exp $
+/* $Id: traversedirhier.c,v 1.2 2000/10/06 13:48:35 drt Exp $
  *  -- drt@ailis.de
  *
  * Traverse a directory hierachy
@@ -8,6 +8,9 @@
  * You might find more Information at http://rc23.cx/
  * 
  * $Log: traversedirhier.c,v $
+ * Revision 1.2  2000/10/06 13:48:35  drt
+ * cleanups
+ *
  * Revision 1.1  2000/07/29 21:24:05  drt
  * initial revision
  *
@@ -25,7 +28,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: traversedirhier.c,v 1.1 2000/07/29 21:24:05 drt Exp $";
+static char rcsid[] = "$Id: traversedirhier.c,v 1.2 2000/10/06 13:48:35 drt Exp $";
 
 int traversedirhier(char *dirname, int(*dofile)(char *file, time_t ctime))
 {
@@ -33,20 +36,8 @@ int traversedirhier(char *dirname, int(*dofile)(char *file, time_t ctime))
   DIR *dir = NULL;
   char strnum[FMT_ULONG];
   struct dirent *x = NULL;
-  static struct stat *sp;
   int r = 0;
   static struct stat st;
-
-  if(stat("/etc/passwd", &st) == -1); 
-  
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, st.st_uid));
-  buffer_puts(buffer_2, " ");
-  buffer_put(buffer_2, strnum, fmt_xlong(strnum, st.st_gid));
-  buffer_puts(buffer_2, "\n");
-  buffer_flush(buffer_2);
-
-  
-  sp = &st;
 
   dir = opendir(dirname);
   if(dir == NULL)
@@ -73,12 +64,12 @@ int traversedirhier(char *dirname, int(*dofile)(char *file, time_t ctime))
 	  stralloc_cats(&name, x->d_name);
 	  stralloc_0(&name);
 
-	  if(lstat(name.s, sp) == -1)
+	  if(lstat(name.s, &st) == -1)
 	    {
 	      strerr_warn2("can't stat ", name.s, &strerr_sys);
 	    }
 
-	  if(S_ISDIR(sp->st_mode))
+	  if(S_ISDIR(st.st_mode))
 	    {
 	      traversedirhier(name.s, dofile);
 	    }
@@ -91,7 +82,7 @@ int traversedirhier(char *dirname, int(*dofile)(char *file, time_t ctime))
 	      buffer_puts(buffer_2, "ddns-cleand: warning: ");
 	      buffer_puts(buffer_2, name.s);
 	      buffer_puts(buffer_2, " no dir and no regular file (");
-	      buffer_put(buffer_2, strnum, fmt_xlong(strnum, sp->st_mode));
+	      buffer_put(buffer_2, strnum, fmt_xlong(strnum, st.st_mode));
 	      buffer_puts(buffer_2, ")\n");
 	      buffer_flush(buffer_2);
 	    }
