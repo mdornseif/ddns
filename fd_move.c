@@ -1,15 +1,20 @@
-/* $Id: fd_move.c,v 1.1 2000/07/12 11:51:48 drt Exp $
+/* $Id: fd_move.c,v 1.2 2000/07/31 19:03:18 drt Exp $
  *  --drt@ailis.de
  * 
  * form ucspi-tcp-0.88 by DJB
  *
  * $Log: fd_move.c,v $
+ * Revision 1.2  2000/07/31 19:03:18  drt
+ * initial revision
+ *
  * Revision 1.1  2000/07/12 11:51:48  drt
  * ddns-clientd
  *
  */
 
 #include "fd.h"
+
+extern int close(int);
 
 int fd_move(int to,int from)
 {
