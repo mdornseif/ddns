@@ -1,8 +1,11 @@
-/* $Id: ddnsd.c,v 1.10 2000/04/30 23:03:18 drt Exp $
+/* $Id: ddnsd.c,v 1.11 2000/05/01 11:47:18 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.11  2000/05/01 11:47:18  drt
+ * ttl/leasetime coms now from data.cdb
+ *
  * Revision 1.10  2000/04/30 23:03:18  drt
  * Unknown user is now communicated by using uid == 0
  *
@@ -38,20 +41,28 @@
  *
  */
 
-#include <sys/stat.h>
-#include <utime.h>
-#include <errno.h>
+#include <errno.h> 
+#include <netdb.h>     /* gethostbyname */
+#include <stdio.h>     /* rename */
+#include <stdlib.h>    /* random, clock */
+#include <sys/stat.h>  /* stat */
+#include <sys/types.h> /* utimbuf */
+#include <time.h>      /* time */
+#include <unistd.h>    /* close, getpid, getppid, sleep, unlink */
+#include <utime.h>     /* utimbuf */
 
 #include "buffer.h"
 #include "cdb.h"
-#include "stralloc.h"
 #include "env.h"
+#include "error.h"
 #include "fmt.h"
 #include "ip4.h"
-#include "readwrite.h"
+#include "now.h"
 #include "open.h"
-#include "error.h"
+#include "readwrite.h"
+#include "stralloc.h"
 #include "strerr.h"
+#include "timeoutread.h"
 
 #include "mt19937.h"
 #include "rijndael.h"
@@ -61,6 +72,8 @@
 static char rcsid[] = "$Id";
 
 static char datadir[] = "dnsdata/cx/rc23/walledcity/dyn";
+
+static uint32 ttl;
 
 static unsigned char *remotehost, *remoteinfo, *remoteip, *remoteport;
 static stralloc username = { 0 };
@@ -220,7 +233,6 @@ int ddnsd_recive(struct ddnsrequest *p)
 {
   int r;
   char *key;
-  struct taia t;
   struct ddnsrequest ptmp = { 0 };
   stralloc data = { 0 };
 
@@ -232,7 +244,8 @@ int ddnsd_recive(struct ddnsrequest *p)
   if(ddnsd_find_user(p, &data))
     {
       key = data.s;
-      stralloc_copyb(&username, &data.s[16], data.len-16);
+      uint32_unpack(&data.s[16], &ttl);
+      stralloc_copyb(&username, &data.s[20], data.len-20);
       
       /* initialize rijndael with 256 bit blocksize and 128 bit keysize */
       rijndaelKeySched(8, 4, key);
@@ -248,9 +261,9 @@ int ddnsd_recive(struct ddnsrequest *p)
       uint32_unpack((char*) &ptmp.loc_lat, &p->loc_lat);
       uint32_unpack((char*) &ptmp.loc_long, &p->loc_long);
       uint32_unpack((char*) &ptmp.loc_alt, &p->loc_alt);
-      ptmp.loc_size, p->loc_size;
-      ptmp.loc_vpre, p->loc_hpre;
-      ptmp.loc_hpre, p->loc_vpre;
+      ptmp.loc_size = p->loc_size;
+      ptmp.loc_vpre = p->loc_hpre;
+      ptmp.loc_hpre = p->loc_vpre;
       
       dump_packet(p, "entpackt");
       
@@ -272,20 +285,14 @@ int ddnsd_recive(struct ddnsrequest *p)
 void ddnsd_setentry( struct ddnsrequest *p)
 {
   struct ddnsreply r = { 0 };
-  unsigned long pid = 0;
-  unsigned long time = 0;
   struct stat st = {0};
   char host[64] = {0};
-  char *s = NULL;
   int loop = 0;
   int fd = 0;
-  int pos = 0;
   stralloc tmpname = { 0 };
   stralloc err = { 0 };
   stralloc finname = { 0 };
-  char inbuf[BUFFER_INSIZE];
   char outbuf[BUFFER_OUTSIZE];
-  buffer ssin;
   char strnum[FMT_ULONG];
   char strip[IP4_FMT];
   buffer ssout;
@@ -381,7 +388,7 @@ void ddnsd_setentry( struct ddnsrequest *p)
   r.type = DDNS_T_ACK;
   r.uid = p->uid;
   /* there should be some more intelligence in setting leasetime */
-  r.leasetime.x = 2317;	 
+  r.leasetime.x = ttl;	 
   ddnsd_send(&r);  
 }
 
@@ -422,7 +429,7 @@ void ddnsd_renewentry( struct ddnsrequest *p)
   r.type = DDNS_T_ACK;
   r.uid = p->uid;
   /* there should be some more intelligence in setting leasetime */
-  r.leasetime.x = 2317;	 
+  r.leasetime.x = ttl;	 
   ddnsd_send(&r);  
 }
 
@@ -459,18 +466,9 @@ void ddnsd_killentry( struct ddnsrequest *p)
   ddnsd_send(&r);  
 }
 
-main()
+int main()
 {
   struct ddnsrequest p = { 0 };
-  struct ddnsreply r = { 0 };
-  unsigned char query[256] = {0};
-  unsigned char clean_query[256] = {0};
-  unsigned char *qptr = NULL;
-  unsigned char *qptr2 = NULL;
-  int len, query_len;
-  int fd = 0;
-  stralloc answer = {0};
-  int strnum;
   
   /* chroot() to $ROOT and switch to $UID:$GID */
   //  droproot("dffingerd: ");

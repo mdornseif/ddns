@@ -1,6 +1,9 @@
-/* $Id: ddns.h,v 1.4 2000/04/30 14:56:57 drt Exp $
+/* $Id: ddns.h,v 1.5 2000/05/01 11:47:18 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.5  2000/05/01 11:47:18  drt
+ * ttl/leasetime coms now from data.cdb
+ *
  * Revision 1.4  2000/04/30 14:56:57  drt
  * cleand up usage of djb stuff
  *
@@ -22,7 +25,9 @@
 #include "tai.h"
 #include "taia.h"
 
-#define NULL 0
+#ifndef NULL
+ #define NULL 0
+#endif
 
 #define DDNS_MAGIC             0xc0dedec0
 #define DDNS_T_ACK             1               /* generic acl */

@@ -1,6 +1,6 @@
 DOWNLOADER = "wget"
 
-CFLAGS=-g -Idnscache -Ilibtai
+CFLAGS=-g -Wall -Idnscache -Ilibtai
 
 defaut: client daemon
 
@@ -14,7 +14,7 @@ ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o rijndael.o mt19937.o dns
 ddnsc: ddnsc.o fmt_xint.o fmt_xlong.o rijndael.o mt19937.o dnscache.a libtai.a 
 	gcc -o $@ $^
 
-ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o dnscache.a libtai.a
+ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libtai.a
 	gcc -o $@ $^
 
 filedns: filedns.o server.o dnscache.a libtai.a

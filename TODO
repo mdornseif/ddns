@@ -9,9 +9,7 @@
 * write manpages
 * entropy gatherer/password creator
 * clean up error codes
-* -Wall
 * fix tai encapsulation
-* checking timestamps
 * dynamic leasetime
 * driver for ddnsc
 * ddnsc: reading passwd from enviroment

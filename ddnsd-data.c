@@ -1,5 +1,15 @@
-#include <sys/types.h>
-#include <sys/stat.h>
+/* $Id: ddnsd-data.c,v 1.4 2000/05/01 11:47:18 drt Exp $
+ *  --drt@ailis.de
+ * 
+ * $Log: ddnsd-data.c,v $
+ * Revision 1.4  2000/05/01 11:47:18  drt
+ * ttl/leasetime coms now from data.cdb
+ *
+ */
+
+#include <sys/stat.h>  /* umask */
+#include <unistd.h>    /* fsync, close */
+#include <stdio.h>     /* rename */
 
 #include "buffer.h"
 #include "byte.h"
@@ -9,131 +19,57 @@
 #include "getln.h"
 #include "open.h"
 #include "readwrite.h"
+#include "scan.h"
 #include "str.h"
 #include "stralloc.h"
 #include "strerr.h"
 #include "uint16.h"
 #include "uint32.h"
 
-#define TTL_NS 259200
-#define TTL_POSITIVE 86400
-#define TTL_NEGATIVE 2560
+#include "pad.h"
+#include "txtparse.h"
+
+static char rcsid[] = "$Id: ddnsd-data.c,v 1.4 2000/05/01 11:47:18 drt Exp $";
+
+#define DEFAULT_TTL 3600
+#define NUMFIELDS 10
 
 #define FATAL "ddnsd-data: fatal: "
 
-void die_datatmp(void)
-{
-  strerr_die2sys(111,FATAL,"unable to create data.tmp: ");
-}
-void nomem(void)
-{
-  strerr_die1sys(111,FATAL);
-}
-
-void txtparse(stralloc *sa)
-{
-  char ch;
-  unsigned int i;
-  unsigned int j;
-
-  j = 0;
-  i = 0;
-  while (i < sa->len) 
-    {
-      ch = sa->s[i++];
-      if (ch == '\\') 
-	{
-	  if (i >= sa->len) 
-	    {
-	      break;
-	    }
-	  ch = sa->s[i++];
-	  if ((ch >= '0') && (ch <= '7')) 
-	    {
-	      ch -= '0';
-	      if ((i < sa->len) && (sa->s[i] >= '0') && (sa->s[i] <= '7')) 
-		{
-		  ch <<= 3;
-		  ch += sa->s[i++] - '0';
-		  if ((i < sa->len) && (sa->s[i] >= '0') && (sa->s[i] <= '7')) 
-		    {
-		      ch <<= 3;
-		      ch += sa->s[i++] - '0';
-		    }
-		}
-	    }
-	}
-      sa->s[j++] = ch;
-    }
-  sa->len = j;
-}
-
-int pad(stralloc *sa, int len)
-{
-  int l;
-
-  while(sa->len < len)
-    {
-      l = len - sa->len;
-      if( l > sa->len) l = sa->len; 
-      stralloc_catb(sa, sa->s, l);
-    }
-  sa->len = len;
-}
-
-int fdcdb;
-struct cdb_make cdb;
-static stralloc key;
-static stralloc result;
-
-void rr_finish(char *owner)
-{
-  if (byte_equal(owner,2,"\1*")) {
-    owner += 2;
-    result.s[2] = '*';
-  }
-  //  if (!stralloc_copyb(&key,owner,dns_domain_length(owner))) nomem();
-  //case_lowerb(key.s,key.len);
-}
-
-buffer b;
-char bspace[1024];
-
-static stralloc line;
-int match = 1;
 unsigned long linenum = 0;
 
-#define NUMFIELDS 10
-static stralloc f[NUMFIELDS];
+void die_datatmp(void)
+{
+  strerr_die2sys(111, FATAL, "unable to create data.tmp: ");
+}
 
-static char *d1;
-static char *d2;
-
-char strnum[FMT_ULONG];
+void nomem(void)
+{
+  strerr_die1sys(111, FATAL);
+}
 
 void syntaxerror(char *why)
 {
+  char strnum[FMT_ULONG];
   strnum[fmt_ulong(strnum,linenum)] = 0;
-  strerr_die4x(111,FATAL,"unable to parse data line ",strnum,why);
+  strerr_die4x(111,FATAL,"unable to parse data line ", strnum, why);
 }
 
-main()
+int main()
 {
-  int fddata;
-  int i;
-  int j;
-  int k;
+  int i, j, k;
+  int fdcdb;
+  int match = 1;
+  uint32 uid = 0;
+  uint32 ttl = 0;
+  buffer b;
+  char bspace[1024];
   char ch;
-  unsigned long uid;
-  char ttd[8];
-  unsigned long u;
-  char ip[4];
-  char ip6[16];
-  char type[2];
-  char soa[20];
-  char buf[4];
   static stralloc key;
   static stralloc data;
+  static stralloc line;
+  struct cdb_make cdb;
+  static stralloc f[NUMFIELDS];
 
   umask(024);
 
@@ -155,7 +91,7 @@ main()
       ++linenum;
       if (getln(buffer_0, &line, &match, '\n') == -1)
 	{
-	  strerr_die2sys(111,FATAL,"unable to read line: ");
+	  strerr_die2sys(111, FATAL, "unable to read line: ");
 	}
       
       while (line.len) 
@@ -186,21 +122,38 @@ main()
 	}
       
       /* example:
-	 uid:uname        :key                      
-	 123:joecypherpunk:geheim
+	 uid:uname        :key   :ttl                
+	 123:joecypherpunk:geheim:3600
       */
       
       stralloc_copys(&key, "");
       stralloc_copys(&data, "");
 
       /* XXX: error handling is missing */
-      scan_ulong(f[0].s,&uid); 
-      txtparse(&f[2]);
-      pad(&f[2], 16);
-
-      if(uid == 0)
+      scan_ulong(f[0].s, &uid); 
+      
+      if(f[2].len > 0)
 	{
-	  strerr_die2x(111, FATAL, "uid 0 not allowed");
+	  txtparse(&f[2]);
+	  pad(&f[2], 16);
+	}
+      else
+	{
+	  syntaxerror("no shared secret");	  
+	}
+
+      if(f[3].len > 0)
+	{
+	  scan_ulong(f[3].s, &ttl); 
+	}
+      else
+	{
+	  ttl = DEFAULT_TTL;
+	}
+
+      if(uid == 0) 
+	{
+	  syntaxerror("uid 0 not allowed");
 	}
       
       stralloc_ready(&key, sizeof(uint32));
@@ -208,6 +161,9 @@ main()
       key.len = 4;
       
       stralloc_copy(&data, &f[2]);
+      stralloc_readyplus(&data, 4);
+      uint32_pack(&data.s[data.len], ttl);
+      data.len += 4;
       stralloc_cat(&data, &f[1]);
 
       if (cdb_make_add(&cdb, key.s, key.len, data.s, data.len) == -1)
@@ -219,10 +175,10 @@ main()
   if (cdb_make_finish(&cdb) == -1) die_datatmp();
   if (fsync(fdcdb) == -1) die_datatmp();
   if (close(fdcdb) == -1) die_datatmp(); /* NFS stupidity */
-  if (rename("data.tmp","data.cdb") == -1)
+  if (rename("data.tmp", "data.cdb") == -1)
     {
-      strerr_die2sys(111,FATAL,"unable to move data.tmp to data.cdb: ");
+      strerr_die2sys(111, FATAL, "unable to move data.tmp to data.cdb: ");
     }
-
+  
   return 0;
 }
