@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.19 2000/07/17 22:35:32 drt Exp $
+# $Id: Makefile,v 1.20 2000/07/19 22:13:28 drt Exp $
 #  --drt@ailis.de
 
 DOWNLOADER = "wget"
@@ -87,8 +87,8 @@ drtlib.a: iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o
 	ar cr drtlib.a iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o
 
 setup-client: ddns-cleand
-	install -bDs ddns-clientd /usr/local/bin/ddns-clientd
-	install -bD ddns-clientd.8 /usr/local/man/man8/ddns-clientd.8
+	install -Ds ddns-clientd /usr/local/bin/ddns-clientd
+	install -D ddns-clientd.8 /usr/local/man/man8/ddns-clientd.8
 
 setup-server:
 	install -Ds ddnsd /usr/local/bin/ddnsd
