@@ -1,25 +1,24 @@
 DOWNLOADER = "wget"
 
-CFLAGS=-g -Idnscache -Ilibtai -Idjblib  
+CFLAGS=-g -Idnscache -Ilibtai
 
-defaut: ddnsd ddnsc ddnsd-data filedns
+defaut: client server
 
-ddnsd: ddnsd.o tools.a dnscache.a libtai.a djblib/djblib.a
+server: ddnsd ddnsd-data filedns
+
+client: ddnsc
+
+ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o tools.a dnscache.a libtai.a
 	gcc -o $@ $^
 
-ddnsc: ddnsc.o tools.a dnscache.a libtai.a djblib/djblib.a
+ddnsc: ddnsc.o fmt_xint.o fmt_xlong.o tools.a dnscache.a libtai.a
 	gcc -o $@ $^
 
-ddnsd-data: ddnsd-data.o tools.a dnscache.a libtai.a djblib/djblib.a
+ddnsd-data: ddnsd-data.o buffer_0.o tools.a dnscache.a libtai.a
 	gcc -o $@ $^
 
-filedns: filedns.o dnscache/server.o dnscache/response.o dnscache/qlog.o dnscache/prot.o dnscache/dd.o libtai.a dnscache.a djblib/djblib.a
+filedns: filedns.o dnscache/server.o libtai.a dnscache.a 
 	gcc -o $@ $^
-
-djblib/djblib.a: 
-	cd djblib
-	make
-	cd ..
 
 tools.a:
 	cd lib; \
@@ -47,13 +46,6 @@ libtai.a:
 	make; \
 	grep -l ^main *.c | perl -npe 's/^(.*).c/\1.o/;' | xargs rm -f; \
 	ar cr ../libtai.a *.o; 	
-
-libs:
-	if [ ! -f djblib/djblib.a ]; then \
-		cd djblib; \
-		make; \
-		cd ..; \
-	fi;
 
 clean:
 	rm -f *.o *.a ddnsd ddnsd-data ddnsc filedns

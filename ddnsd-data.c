@@ -1,18 +1,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "djblib/uint16.h"
-#include "djblib/uint32.h"
-#include "djblib/str.h"
-#include "djblib/byte.h"
-#include "djblib/fmt.h"
-#include "djblib/exit.h"
-#include "djblib/readwrite.h"
-#include "djblib/buffer.h"
-#include "djblib/strerr.h"
-#include "djblib/getln.h"
-#include "djblib/cdb_make.h"
-#include "djblib/stralloc.h"
-#include "djblib/open.h"
+#include "uint16.h"
+#include "uint32.h"
+#include "str.h"
+#include "byte.h"
+#include "fmt.h"
+#include "exit.h"
+#include "readwrite.h"
+#include "buffer.h"
+#include "strerr.h"
+#include "getln.h"
+#include "cdb_make.h"
+#include "stralloc.h"
+#include "open.h"
 
 #define TTL_NS 259200
 #define TTL_POSITIVE 86400

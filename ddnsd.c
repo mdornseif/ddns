@@ -1,8 +1,11 @@
-/* $Id: ddnsd.c,v 1.7 2000/04/27 12:12:40 drt Exp $
+/* $Id: ddnsd.c,v 1.8 2000/04/30 14:56:57 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.8  2000/04/30 14:56:57  drt
+ * cleand up usage of djb stuff
+ *
  * Revision 1.7  2000/04/27 12:12:40  drt
  * Changed data packets to 32+512 Bits size, added functionality to
  * transport IPv6 adresses and LOC records.
@@ -33,16 +36,16 @@
 #include <utime.h>
 #include <errno.h>
 
-#include "djblib/buffer.h"
-#include "djblib/cdb.h"
-#include "djblib/stralloc.h"
-#include "djblib/env.h"
-#include "djblib/fmt.h"
-#include "djblib/ip4.h"
-#include "djblib/readwrite.h"
-#include "djblib/open.h"
-#include "djblib/error.h"
-#include "djblib/strerr.h"
+#include "buffer.h"
+#include "cdb.h"
+#include "stralloc.h"
+#include "env.h"
+#include "fmt.h"
+#include "ip4.h"
+#include "readwrite.h"
+#include "open.h"
+#include "error.h"
+#include "strerr.h"
 
 #include "lib/mt19937.h"
 #include "lib/rijndael.h"

@@ -1,8 +1,11 @@
-/* $Id: ddnsc.c,v 1.4 2000/04/27 12:12:40 drt Exp $
+/* $Id: ddnsc.c,v 1.5 2000/04/30 14:56:57 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.5  2000/04/30 14:56:57  drt
+ * cleand up usage of djb stuff
+ *
  * Revision 1.4  2000/04/27 12:12:40  drt
  * Changed data packets to 32+512 Bits size, added functionality to
  * transport IPv6 adresses and LOC records.
@@ -19,20 +22,20 @@
  */
 
 
-#include "djblib/buffer.h"
-#include "djblib/env.h"
-#include "djblib/error.h"
-#include "djblib/fmt.h"
-#include "djblib/stralloc.h"
-#include "djblib/strerr.h"
-#include "djblib/timeoutwrite.h"
+#include "buffer.h"
+#include "env.h"
+#include "error.h"
+#include "fmt.h"
+#include "stralloc.h"
+#include "strerr.h"
+#include "timeoutwrite.h"
 
 #include "lib/mt19937.h"
 #include "lib/rijndael.h"
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsc.c,v 1.4 2000/04/27 12:12:40 drt Exp $";
+static char rcsid[] = "$Id: ddnsc.c,v 1.5 2000/04/30 14:56:57 drt Exp $";
 
 #define FATAL "ddnsc: "
 

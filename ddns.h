@@ -1,6 +1,9 @@
-/* $Id: ddns.h,v 1.3 2000/04/27 12:12:40 drt Exp $
+/* $Id: ddns.h,v 1.4 2000/04/30 14:56:57 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.4  2000/04/30 14:56:57  drt
+ * cleand up usage of djb stuff
+ *
  * Revision 1.3  2000/04/27 12:12:40  drt
  * Changed data packets to 32+512 Bits size, added functionality to
  * transport IPv6 adresses and LOC records.
@@ -13,11 +16,11 @@
  *
  */
 
-#include "djblib/uint16.h"
-#include "djblib/uint32.h"
-#include "djblib/uint64.h"
-#include "djblib/tai.h"
-#include "djblib/taia.h"
+#include "uint16.h"
+#include "uint32.h"
+#include "uint64.h"
+#include "tai.h"
+#include "taia.h"
 
 #define NULL 0
 
