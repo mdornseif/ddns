@@ -2,7 +2,6 @@
 * ipv6 support
 * checking connection between source ip and requesting ip
 * clean up log/error messages
-* renumber DDNS_T_*
 * document protocol
 * write manpages
 * entropy gatherer/password creator
