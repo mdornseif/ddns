@@ -1,10 +1,12 @@
-# $Id
+# $Id: Makefile,v 1.12 2000/07/12 12:33:50 drt Exp $
 
 DOWNLOADER = "wget"
 
 CFLAGS=-g -Wall -Idnscache -Ilibtai
 
-defaut: client daemon
+defaut: client
+
+all: client daemon
 
 daemon: libs ddnsd ddnsd-data ddns-cleand filedns
 
@@ -52,6 +54,7 @@ dnscache.a:
 		tar xzvf dnscache-1.00.tar.gz; rm dnscache-1.00.tar.gz; \
 		mv dnscache-1.00 dnscache; \
 		cd dnscache; patch < ../dnscache-1.00-ipv6.diff5 ; cd ..; \
+		rm dnscache-1.00-ipv6.diff5; \
         fi;	
 	cd dnscache; \
 	make; \
@@ -70,8 +73,8 @@ libtai.a:
 	ar cr ../libtai.a *.o; 	
 
 clean:
-	rm -f *.o ddnsd ddnsd-data ddnsc filedns hassgprm.h hassgact.h
+	rm -f *.o ddnsd ddnsd-data ddns-clientd filedns hassgprm.h hassgact.h *.a
 
 distclean: clean
 	rm -f *~ *.cdb core
-	rm -Rf dnscache libtai
+	rm -Rf dnscache libtai 

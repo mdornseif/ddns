@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.2 2000/07/12 11:34:25 drt Exp $
+/* $Id: ddns-clientd.c,v 1.3 2000/07/12 12:33:50 drt Exp $
  *  -- drt@ailis.de
  * 
  * metaclient for ddns - driver for ddnsdc
@@ -6,6 +6,9 @@
  * (K)opyright is Myth
  * 
  * $Log: ddns-clientd.c,v $
+ * Revision 1.3  2000/07/12 12:33:50  drt
+ * fixed the buildprocess
+ *
  * Revision 1.2  2000/07/12 11:34:25  drt
  * ddns-clientd handels now everything itself.
  * ddnsc is now linked to ddnsd-clientd, do a
@@ -31,7 +34,6 @@
 #include "fd.h"
 #include "ip4.h"
 #include "ip6.h"
-#include "pathexec.h"
 #include "scan.h"
 #include "sig.h"
 #include "socket.h"
@@ -47,7 +49,7 @@
 #include "ddns.h"
 #include "loc.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.2 2000/07/12 11:34:25 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.3 2000/07/12 12:33:50 drt Exp $";
 
 #define FATAL "ddns-clientd.c: fatal: "
 
