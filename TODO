@@ -21,3 +21,4 @@
 * ddnsc: reading passwd from enviroment
 * ddnsd: chrooting
 * update protocoll for udp
+* handle timeouts smater
