@@ -1,0 +1,92 @@
+CLIENT
+
+* ddns-client is started with IPv4 and IPv6 Address and LOC in the
+  commandline it uses tcpclient and ddnsc to register at the
+  server. Then it sleeps for leadetime-17 renews the registration and
+  starts over sleeping. 
+
+* If ddns-clientd recives a SIGTERM it deregisters at the server 
+  and exits.
+
+
+SERVER
+
+ddnsd
+
+* ddnsd is started by tcpserver if a connection form the internet
+  arrives it chroots to ROOT and drops privileges to UID:GID it gets
+  information about the remote connection by enviroment variables
+  conforming to ucspi-tcp it expects a single parameter describing
+  DOT/ZONEDIR
+
+* ddnsd reads a 68 byte request and answers with a 68 byte reply then quits
+
+* using the uid from the request it looks up this user in data.cdb if
+  not found it indicates an error, else it reads HOSTN, SECRET and TTL
+
+* SECRET is used to encrypt the remaining 64 bytes of the request
+
+* if it is a setentryrequest ddnsd creates DOT/ZONEDIR/HOSTN and puts
+  the IP Adress of the client in there then sends a reply with a
+  leasetime of TTL. for creation it uses a file in tmp which gets
+  moved to DOT/ZONEDIR/HOSTN when completed
+
+* if it is a renewentryrequest it touches DOT/ZONEDIR/HOSTN and replys
+  with a zero leaseti me.
+
+* if it is a killentryrequest is deletes DOT/ZONEDIR/HOSTN
+
+
+ddns-cleand
+
+* ddns-cleand runs chrooted in ROOT and drops privileges to UID:GID
+  expecting DOT as a parameter
+
+* it crawls the direcrorytree DOT/* looks up for every file found the
+  uid in data.cdb to find TTL. If mtime + TTL < now() it removes the
+  file.
+
+* it deletes all files in tmp older then 1.5 days
+
+
+filedns
+
+* filedns listens on port 53:UDP for DNS requests. it chroots to ROOT
+  and drops privileges to UID:GID. ROOT should point to the DOT
+  directory in ddns/filedns ROOT.
+
+* after reciving a request it converts the data from the dnstree to a
+  filetree. drt.dyn.rc23.cx will get cx/rc23/dyn/drt. it tries to read
+  this file and deliver the data found in there to the client.
+
+Example directorystructure:
+ 
+ROOT (for ddnsd and ddns-cleand) = /whatever/root/
+DOT = dot
+ZONEDIR = cx/rc23/dyn
+
+/whatever/root/dot/cx/rc23/dyn/
+            |   |
+            |   + filedns runs chrooted here
+            |
+            + ddnsd and ddns-clean run chrooted here
+
+If updaterequests should arrive on c0re.rc23.cx:3456 and dnsservice
+for zone "dyn.rc23.cx" should be provided at c0re.rc23.cx do:
+
+ROOT=/whatever/root envuidgid ddnsw ddnsd dot/cx/rc23/dyn
+ROOT=/whatever/root envuidgid ddnsw ddns-cleand dot
+ROOT=/whatever/root/dot envuidgid ddnsr filedns 
+
+logging will be done by all three programms to stdout so they will be
+run best with daemontolls and supervise.
+
+ddnsw is the user for writing ddns data.  ddnsr is the user for
+reading ddns data and should be member of ddnsws primary group.
+
+
+ddnsd-data
+
+* reads data from stdin creating data.cdb.  the data is oriented
+  linewise and contains comma seperated fields.  uid,shared
+  secret,hostn,ttl.
