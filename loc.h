@@ -1,11 +1,16 @@
-/* $Id: loc.h,v 1.2 2000/07/12 11:34:25 drt Exp $
+/* $Id: loc.h,v 1.3 2000/07/29 21:35:27 drt Exp $
  *
  * header for DNS LOC handling routines
  *  -- drt@ailis.de
  *
  * (K)opyright is Myth
  * 
+ * You might find more information at http://rc23.cx/
+ *
  * $Log: loc.h,v $
+ * Revision 1.3  2000/07/29 21:35:27  drt
+ * removed snprintf()
+ *
  * Revision 1.2  2000/07/12 11:34:25  drt
  * ddns-clientd handels now everything itself.
  * ddnsc is now linked to ddnsd-clientd, do a
@@ -34,7 +39,7 @@ struct loc_s {
 };
 
 /* converts a zone file representation in a string to an struct loc_s */
-int loc_aton(const char *ascii, struct loc_s *loc);
+int loc_aton(char *ascii, struct loc_s *loc);
 
 /* struct loc_s and emits it in a human readable format. */
 char *loc_ntoa(struct loc_s *loc, stralloc *sa);

@@ -1,4 +1,4 @@
-/* $Id: loc.c,v 1.4 2000/07/13 18:20:47 drt Exp $
+/* $Id: loc.c,v 1.5 2000/07/29 21:35:17 drt Exp $
  *  -- drt@ailis.de
  * 
  * handling of LOC data 
@@ -14,6 +14,9 @@
  * seconds - how baroqe!
  * 
  * $Log: loc.c,v $
+ * Revision 1.5  2000/07/29 21:35:17  drt
+ * removed snprintf()
+ *
  * Revision 1.4  2000/07/13 18:20:47  drt
  * everything supports now DNS LOC
  *
@@ -34,7 +37,7 @@
  *
  */
 
-static char rcsid[] = "$Id: loc.c,v 1.4 2000/07/13 18:20:47 drt Exp $";
+static char rcsid[] = "$Id: loc.c,v 1.5 2000/07/29 21:35:17 drt Exp $";
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -195,9 +198,9 @@ static uint32 latlon2ul(char **latlonstrptr, int* which)
 
 /* converts a zone file representation in a string to an RDATA
  * on-the-wire representation. */
-int loc_aton(const char *ascii, struct loc_s *loc)
+int loc_aton(char *ascii, struct loc_s *loc)
 {
-  const char *cp, *maxcp;
+  char *cp, *maxcp;
   
   int32_t latit = 0, longit = 0, alt = 0;
   int32_t lltemp1 = 0, lltemp2 = 0;
@@ -297,6 +300,7 @@ char *loc_ntoa(struct loc_s *loc, stralloc *sa)
   int longdeg, longmin, longsec, longsecfrac;
   char northsouth, eastwest;
   int altsign;
+  char strnum[FMT_ULONG];
   
   const int referencealt = 10000000;
   
@@ -320,7 +324,7 @@ char *loc_ntoa(struct loc_s *loc, stralloc *sa)
   else
     northsouth = 'N';
   
-  latsecfrac = latval % 1000;
+  latsecfrac = latval % 1000; 
   latval = latval / 1000;
   latsec = latval % 60;
   latval = latval / 60;
@@ -345,17 +349,44 @@ char *loc_ntoa(struct loc_s *loc, stralloc *sa)
   
   altval = altval * altsign;
 
-  stralloc_readyplus(sa, 123);
-  sa->len += snprintf(&sa->s[sa->len], 128,
-	  "%d %.2d %.2d.%.3d %c %d %.2d %.2d.%.3d %c %d %d %d %d",
-	  latdeg, latmin, latsec, latsecfrac, northsouth,
-	  longdeg, longmin, longsec, longsecfrac, eastwest,
-	  altval, precsize_eton(loc->size), 
-	  precsize_eton(loc->hpre), precsize_eton(loc->vpre));
- 
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, latdeg));
+  stralloc_cats(sa, " 00");
+  sa->len -=2;
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, latmin));
+  stralloc_cats(sa, " 00");
+  sa->len -=2;
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, latsec));
+  stralloc_cats(sa, ".000");
+  sa->len -=3;
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, latsecfrac));
+  stralloc_cats(sa, " ");
+  stralloc_append(sa, &northsouth);
+  stralloc_cats(sa, " ");
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, longdeg));
+  stralloc_cats(sa, " 00");
+  sa->len -=2;
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, longmin));
+  stralloc_cats(sa, " 00");
+  sa->len -=2;
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, longsec));
+  stralloc_cats(sa, ".000");
+  sa->len -=3;
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, longsecfrac));
+  stralloc_cats(sa, " ");
+  stralloc_append(sa, &eastwest);
+  stralloc_cats(sa, " ");
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, altval));
+  stralloc_cats(sa, " ");
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, precsize_eton(loc->size)));
+  stralloc_cats(sa, " ");
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, precsize_eton(loc->hpre)));
+  stralloc_cats(sa, " ");
+  stralloc_catb(sa, strnum, fmt_ulong(strnum, precsize_eton(loc->vpre)));
+
   return (sa->s);
 }
 
 
 
 
+#
