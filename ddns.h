@@ -1,6 +1,10 @@
-/* $Id: ddns.h,v 1.8 2000/07/14 15:32:51 drt Exp $
+/* $Id: ddns.h,v 1.9 2000/07/29 21:45:53 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.9  2000/07/29 21:45:53  drt
+ * added stralloc_free()
+ * changed uint32 reserved[] to char reserved[]
+ *
  * Revision 1.8  2000/07/14 15:32:51  drt
  * The timestamp is checked now in ddnsd and an error
  * is returned if there is more than 4000s fuzz.
@@ -34,6 +38,9 @@
  *
  */
 
+#ifndef DDNS_H
+#define DDNS_H
+
 #include "uint16.h"
 #include "uint32.h"
 #include "uint64.h"
@@ -58,6 +65,12 @@
 #define DDNS_T_EUNKNOWNUID   0xb  /* client sent unknown uid */
 #define DDNS_T_EALLREADYUSED 0xc  /* client requsted to set something which is already set */
 #define DDNS_T_ENOENTRYUSED  0xd  /* client requsted to renew/kill something which is not set */
+
+#define DDNSREQUESTSIZE 68
+#define DDNSREPLYSIZE 68
+
+#define NUMFIELDS 10
+#define ACLWFIFONAME "machkeinscheiss"
 
 struct ddnsrequest {
   uint32 uid;
@@ -85,7 +98,7 @@ struct ddnsreply {
   uint16 random1;                          //  32
   uint32 magic;                            //  64
   uint32 leasetime;                        // 224
-  uint32 reserved[9];                      // 512
+  char reserved[36];                     // 512
   /* here we will add a "you must have lost a packet"-field
      for udp as a transport
      uint32 already_set;
@@ -93,3 +106,6 @@ struct ddnsreply {
   struct taia timestamp;                   // 192
  };
 
+#define stralloc_free(sa)  alloc_free((sa)->s); (int)(sa)->s = (sa)->len = (sa)->a = 0;
+
+#endif
