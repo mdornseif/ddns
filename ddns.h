@@ -1,6 +1,9 @@
-/* $Id: ddns.h,v 1.5 2000/05/01 11:47:18 drt Exp $
+/* $Id: ddns.h,v 1.6 2000/05/02 22:50:19 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.6  2000/05/02 22:50:19  drt
+ * Renumbered DDNS_T
+ *
  * Revision 1.5  2000/05/01 11:47:18  drt
  * ttl/leasetime coms now from data.cdb
  *
@@ -29,20 +32,20 @@
  #define NULL 0
 #endif
 
-#define DDNS_MAGIC             0xc0dedec0
-#define DDNS_T_ACK             1               /* generic acl */
-#define DDNS_T_NAK             2               /* generic nak */
+#define DDNS_MAGIC             0xc0decafe
+#define DDNS_T_ACK             1  /* generic acl */
+#define DDNS_T_NAK             2  /* generic nak (unused) */
 #define DDNS_T_SETENTRY        3               
 #define DDNS_T_RENEWENTRY      4
 #define DDNS_T_KILLENTRY       5
-#define DDNS_T_EPROTERROR      6               /* generic protocol error */
-#define DDNS_T_EWRONGMAGIC     7               /* wrong magic token */
-#define DDNS_T_ECANTDECRYPT    8               /* can't decrypt packet */
-#define DDNS_T_EALLREADYUSED   9               /* client requsted to set something which is already set */
-#define DDNS_T_ESERVINT        10              /* internal server error */
-#define DDNS_T_EUNKNOWNUID     11              /* client sent unknown uid */
-#define DDNS_T_EUNSUPPTYPE     12              /* unknown or unsupported type in this situation */
-#define DDNS_T_ENOENTRYUSED    13              /* client requsted to renew/kill something which is not set */
+#define DDNS_T_ESERVINT        6  /* internal server error */
+#define DDNS_T_EPROTERROR      7  /* generic protocol error */
+#define DDNS_T_EWRONGMAGIC     8  /* wrong magic token */
+#define DDNS_T_ECANTDECRYPT    9  /* can't decrypt packet */
+#define DDNS_T_EUNSUPPTYPE   0xa  /* unknown or unsupported type in this situation */
+#define DDNS_T_EUNKNOWNUID   0xb  /* client sent unknown uid */
+#define DDNS_T_EALLREADYUSED 0xc  /* client requsted to set something which is already set */
+#define DDNS_T_ENOENTRYUSED  0xd  /* client requsted to renew/kill something which is not set */
 
 struct ddnsrequest {
   uint32 uid;
@@ -51,7 +54,7 @@ struct ddnsrequest {
   uint32 magic;                            //  64
   struct taia timestamp;                   // 192
   uint32 ip4;                              // 224
-  unsigned char ip6[16];                    // 352
+  unsigned char ip6[16];                   // 352
   unsigned char reserved1;                 // 360         
   unsigned char loc_size;                  // 368
   unsigned char loc_hpre;                  // 376
@@ -70,6 +73,10 @@ struct ddnsreply {
   uint32 magic;                            //  64
   struct taia timestamp;                   // 192
   struct tai leasetime;                    // 256
+  /* here we will add a "you must have lost a packet"-field
+     for udp as a transport
+     uint32 already_set;
+  */
   uint32 reserved[8];                      // 512
 };
 
