@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.18 2000/07/17 21:45:24 drt Exp $
+# $Id: Makefile,v 1.19 2000/07/17 22:35:32 drt Exp $
 #  --drt@ailis.de
 
 DOWNLOADER = "wget"
@@ -13,11 +13,11 @@ daemon: libs ddnsd ddnsd-data ddns-cleand filedns
 
 client: libs ddns-clientd
 
-ddnsd: ddns.h ddnsd.o dnscache.a libtai.a drtlib.a djblib.a
-	gcc -o $@ ddnsd.o dnscache.a libtai.a drtlib.a djblib.a
+ddnsd: ddns.h ddnsd.o libtai.a djblib.a drtlib.a dnscache.a
+	gcc -o $@ ddnsd.o libtai.a djblib.a drtlib.a dnscache.a
 
-ddns-cleand: ddns.h ddns-cleand.o dnscache.a libtai.a drtlib.a djblib.a
-	gcc -o $@ ddns-cleand.o dnscache.a libtai.a drtlib.a djblib.a
+ddns-cleand: ddns.h ddns-cleand.o libtai.a djblib.a drtlib.a dnscache.a 
+	gcc -o $@ ddns-cleand.o libtai.a djblib.a drtlib.a dnscache.a 
 
 ddns-clientd: ddns.h ddns-clientd.o ddnsc.o dnscache.a libtai.a \
 drtlib.a djblib.a dnscache/ndelay_off.o
@@ -27,8 +27,10 @@ drtlib.a djblib.a dnscache/ndelay_off.o
 ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libtai.a
 	gcc -o $@ ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libtai.a
 
-filedns: ddns.h filedns.o server.o txtparse.o dnscache.a libtai.a drtlib.a djblib.a
-	gcc -o $@ filedns.o server.o txtparse.o dnscache.a libtai.a drtlib.a djblib.a
+filedns: ddns.h filedns.o server.o txtparse.o response.o qlog.o dd.o \
+dnscache.a libtai.a djblib.a drtlib.a  
+	gcc -o $@ filedns.o server.o txtparse.o response.o qlog.o dd.o \
+        dnscache.a libtai.a djblib.a drtlib.a
 
 sig_block.o: sig_block.c hassgprm.h
 
@@ -82,7 +84,7 @@ sig_int.o sig_term.o socket_delay.o socket_local.o timeoutconn.o
 	socket_local.o
 
 drtlib.a: iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o
-	ar cr drtlib.a iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
+	ar cr drtlib.a iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o
 
 setup-client: ddns-cleand
 	install -bDs ddns-clientd /usr/local/bin/ddns-clientd
@@ -95,8 +97,8 @@ setup-server:
 	install -D ddnsd-data.8 /usr/local/man/man8/ddnsd-data.8
 	install -Ds filedns /usr/local/bin/filedns
 	install -D filedns.8 /usr/local/man/man8/filedns.8
-#	install -Ds ddnsd-cleand /usr/local/bin/ddnsd-cleand
-#	install -D ddnsd-cleand.8 /usr/local/man/man8/ddns-cleand.8
+	install -Ds ddnsd-cleand /usr/local/bin/ddnsd-cleand
+	install -D ddnsd-cleand.8 /usr/local/man/man8/ddns-cleand.8
 
 clean:
 	rm -f *.o ddnsd ddnsd-data ddns-clientd filedns hassgprm.h hassgact.h *.a

@@ -1,17 +1,16 @@
-/* $Id: server.c,v 1.1 2000/04/30 15:59:26 drt Exp $
+/* $Id: server.c,v 1.2 2000/07/17 22:35:32 drt Exp $
  *
- * This is Software based on code of Dan Bernstein,
- * but since I messed with it please do not bother Dan
- * with questions regarding this stuff.
- *                               --- drt@ailis.de
+ * This is taken from Dan Bernsteins dnscache 1.00
+ *  --drt@ailis.de
+ *
  * $Log: server.c,v $
- * Revision 1.1  2000/04/30 15:59:26  drt
- * cleand up usage of djb stuff
+ * Revision 1.2  2000/07/17 22:35:32  drt
+ * ddnsd and ddns-cleand don't allow to run with UID0.
+ * sources imported from dnscache directly into my tree.
  *
  */
 
-#include "dnscache/byte.h"
-
+#include "byte.h"
 #include "case.h"
 #include "env.h"
 #include "strerr.h"
@@ -24,7 +23,7 @@
 #include "response.h"
 #include "dns.h"
 
-static char rcsid[] = "$Id: server.c,v 1.1 2000/04/30 15:59:26 drt Exp $";
+static char rcsid[] = "$Id: server.c,v 1.2 2000/07/17 22:35:32 drt Exp $";
 
 extern char *fatal;
 extern int respond(char *,char *,char *);

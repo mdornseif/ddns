@@ -1,9 +1,13 @@
-/* $Id: droprootordie.c,v 1.1 2000/07/17 21:45:24 drt Exp $
+/* $Id: droprootordie.c,v 1.2 2000/07/17 22:35:32 drt Exp $
  *  --drt@ailis.de
  * 
  * based on Dan Bernsteins droproot()
  *
  * $Log: droprootordie.c,v $
+ * Revision 1.2  2000/07/17 22:35:32  drt
+ * ddnsd and ddns-cleand don't allow to run with UID0.
+ * sources imported from dnscache directly into my tree.
+ *
  * Revision 1.1  2000/07/17 21:45:24  drt
  * ddnsd and ddns-cleand now refuse to run as root
  *
@@ -15,7 +19,7 @@
 #include "prot.h"
 #include "strerr.h"
 
-static char rcsid[] = "$Id: droprootordie.c,v 1.1 2000/07/17 21:45:24 drt Exp $";
+static char rcsid[] = "$Id: droprootordie.c,v 1.2 2000/07/17 22:35:32 drt Exp $";
 
 void droprootordie(char *fatal)
 {
@@ -42,7 +46,7 @@ void droprootordie(char *fatal)
     strerr_die2x(111,fatal,"$UID not set");
   scan_ulong(x,&id);
 
-  if(uid == 0)
+  if(id == 0)
     strerr_die2x(111, fatal, "unable to run under uid 0: please change $UID");
 
   if (prot_uid((int) id) == -1)
