@@ -31,12 +31,12 @@ A
 .B IPv4 address 
 beginns with 
 .I `=,'
-followed by a dotted decimal IPv4 address,
+followed by the decimal user id,
 .I `,'
-and the decimal user id.
+and a dotted decimal IPv4 address.
 
 .EX
-     =,1.2.3.4,23
+     =,23,1.2.3.4
 .EE
 
 .TP 5
@@ -45,12 +45,12 @@ A
 .B IPv6 address 
 beginns with 
 .I `6,'
-followed by an coloned hexadecimal IPv6 address,
+followed by the decimal user id,
 .I `,'
-and the decimal user id.
+and an coloned hexadecimal IPv6 address.
 
 .EX
-     6,1234:5678::90ab:cdef,23
+     6,32,1234:5678::90ab:cdef
 .EE
 
 .TP 5
@@ -58,12 +58,12 @@ and the decimal user id.
 .B DNS LOC information 
 beginns with 
 .I `L,'
-followed by an encoded DNS LOC record,
+followed by the decimal user id,
 .I `,'
-and the decimal user id.
+and an encoded DNS LOC record.
 
 .EX
-     L,\\000SS\\023\\212\\356\\352D\\201{'\\254\\000\\230\\254\\304,23
+     L,32,\\000SS\\023\\212\\356\\352D\\201{'\\254\\000\\230\\254\\304
 .EE
 
 For the data format of a DNS LOC RR see  

@@ -1,4 +1,4 @@
-/* $Id: dAVLTree.c,v 1.2 2000/07/29 21:05:48 drt Exp $
+/* $Id: dAVLTree.c,v 1.3 2000/07/31 19:15:56 drt Exp $
  *  --drt@ailis.de
  *
  * Source code for the AVLTree library (ddns version).
@@ -31,6 +31,10 @@
  * You might find more Information at http://rc23.cx/
  * 
  * $Log: dAVLTree.c,v $
+ * Revision 1.3  2000/07/31 19:15:56  drt
+ * ddns-file(5) format changed
+ * a lot of restructuring
+ *
  * Revision 1.2  2000/07/29 21:05:48  drt
  * renamed functions to dAVL*
  * now data is directly saved in the leaves to lessen
@@ -39,7 +43,9 @@
  */
 
 #include <malloc.h>
+
 #include "byte.h" 
+#include "stralloc.h"
 
 #include "dAVLTree.h"
 #include "ddns.h"

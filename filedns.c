@@ -1,8 +1,12 @@
-/* $Id: filedns.c,v 1.3 2000/07/13 18:20:47 drt Exp $
+/* $Id: filedns.c,v 1.4 2000/07/31 19:15:56 drt Exp $
  *
  * dnsserver serving from the filesystem
  * 
  * $Log: filedns.c,v $
+ * Revision 1.4  2000/07/31 19:15:56  drt
+ * ddns-file(5) format changed
+ * a lot of restructuring
+ *
  * Revision 1.3  2000/07/13 18:20:47  drt
  * everything supports now DNS LOC
  *
@@ -33,14 +37,21 @@
 #include "strerr.h"
 #include "txtparse.h"
 
-static char rcsid[] = "$Id: filedns.c,v 1.3 2000/07/13 18:20:47 drt Exp $";
+#include "ddns.h"
 
-/* This is missing in DJBs headers, fefe should add it to libdjb (and strerr_warnXsys) */
+static char rcsid[] = "$Id: filedns.c,v 1.4 2000/07/31 19:15:56 drt Exp $";
+
+/* XXX: This is missing in DJBs headers, fefe should add it to libdjb (and strerr_warnXsys) */
 #define DNS_T_LOC "\0\35"
 
 #define FATAL "fatal: "
 /* XXX: cleanme */
 char *fatal = "filedns: fatal: ";
+
+void die_nomem(void)
+{
+  strerr_die1sys(111, "filedns: fatal: help - no memory ");
+}
 
 void initialize(void)
 {
@@ -102,7 +113,7 @@ int respond(char *q, char qtype[2])
   int match = 1;
   unsigned long linenum = 0;
   int data = 0;
-  char ch;
+  stralloc f[NUMFIELDS] = {{0}};
 
   /* check what the client is requesting */
   flaga = byte_equal(qtype,2,DNS_T_A);
@@ -120,7 +131,7 @@ int respond(char *q, char qtype[2])
   fd = open_read(filename.s);
   if (fd == -1) 
     {
-      strerr_warn1("unable to open file: ", &strerr_sys);
+      strerr_warn3("unable to open file: ", filename.s, ": ", &strerr_sys);
       match = 0;
     }
   
@@ -137,23 +148,21 @@ int respond(char *q, char qtype[2])
 	}
   
       /* clean up line end */
-      while(line.len) 
-	{
-	  ch = line.s[line.len - 1];
-	  if ((ch != ' ') && (ch != '\t') && (ch != '\n')) break;
-	  --line.len;
-	}
-      if(!line.len) continue;
+      stralloc_cleanlineend(&line); 
       
-      /* skip comments */
+      /* skip comments  & empty lines */
       if(line.s[0] == '#') continue;
+      if(line.s[0] == 0) continue;
       
+      /* seperate fields */
+      fieldsep(f, NUMFIELDS, &line, ',');
+
       /* IPv4 */
-      if(line.s[0] == '=')
+      if(f[0].s[0] == '=')
 	{
 	  if (flaga) 
 	    {
-	      ip4_scan(&line.s[2], ip);
+	      ip4_scan(f[2].s, ip);
 	      data++;
 	      /* put type and ttl (60s) */
 	      if (!response_rstart(q, DNS_T_A, "\0\0\0\74")) return 0;
@@ -165,11 +174,11 @@ int respond(char *q, char qtype[2])
 	}
 
       /* IPv6 */
-      if(line.s[0] == '6')
+      if(f[0].s[0] == '6')
 	{
 	  if (flagaaaa) 
 	    {
-	      ip6_scan(&line.s[2], ip);
+	      ip6_scan(f[0].s, ip);
 	      data++;
 	      /* put type and ttl (60s) */
 	      if (!response_rstart(q, DNS_T_AAAA, "\0\0\0\74")) return 0;
@@ -179,13 +188,14 @@ int respond(char *q, char qtype[2])
 	      response_rfinish(RESPONSE_ANSWER);
 	    }
 	}
+
       /* LOC */
-      if(line.s[0] == 'L')
+      if(f[0].s[0] == 'L')
 	{
 	  if (flagloc) 
 	    {
-	      txtparse(&line);
-	      if(line.s <= 20)
+	      txtparse(&f[2]);
+	      if(f[2].len <= 16)
 		{		
 		  buffer_puts(buffer_2, "filedns: warning: LOC record seems to short\n");
 		  buffer_flush(buffer_2);
@@ -194,7 +204,7 @@ int respond(char *q, char qtype[2])
 	      /* put type and ttl (60s) */
 	      if (!response_rstart(q, DNS_T_LOC, "\0\0\0\74")) return 0;
 	      /* put ip */
-	      if (!response_addbytes(&line.s[2], 16)) return 0;
+	      if (!response_addbytes(f[2].s, 16)) return 0;
 	      /* record finished */
 	      response_rfinish(RESPONSE_ANSWER);
 	    }

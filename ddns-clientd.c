@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.9 2000/07/29 22:00:42 drt Exp $
+/* $Id: ddns-clientd.c,v 1.10 2000/07/31 19:15:56 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
@@ -8,6 +8,10 @@
  * This file is to long!
  *
  * $Log: ddns-clientd.c,v $
+ * Revision 1.10  2000/07/31 19:15:56  drt
+ * ddns-file(5) format changed
+ * a lot of restructuring
+ *
  * Revision 1.9  2000/07/29 22:00:42  drt
  * retrying connection to server
  * detecting a changed client ip
@@ -64,6 +68,7 @@
 #include "scan.h"
 #include "sig.h"
 #include "socket.h"
+#include "socket_delay.h"
 #include "stralloc.h"
 #include "strerr.h"
 #include "timeoutconn.h"
@@ -76,7 +81,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.9 2000/07/29 22:00:42 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.10 2000/07/31 19:15:56 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 

@@ -1,4 +1,4 @@
-/* $Id: ddns-cleand.c,v 1.5 2000/07/29 21:50:37 drt Exp $
+/* $Id: ddns-cleand.c,v 1.6 2000/07/31 19:15:56 drt Exp $
  *  --drt@ailis.de
  *
  * cleaning daemon for ddns
@@ -10,6 +10,10 @@
  * (K)opyright is myth
  *
  * $Log: ddns-cleand.c,v $
+ * Revision 1.6  2000/07/31 19:15:56  drt
+ * ddns-file(5) format changed
+ * a lot of restructuring
+ *
  * Revision 1.5  2000/07/29 21:50:37  drt
  * field seperation now is extern
  * line parsing still has to moved put
@@ -56,7 +60,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.5 2000/07/29 21:50:37 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.6 2000/07/31 19:15:56 drt Exp $";
 
 /* maximum number of fields in a line */
 #define NUMFIELDS 10
@@ -140,7 +144,7 @@ int dofile(char *file, time_t ctime)
   if (fd == -1) 
     {
       strerr_warn3("unable to open file: ", file, " ", &strerr_sys);
-      return;
+      return -1;
     }
   
   buffer_init(&b, read, fd, bspace, sizeof bspace);
@@ -155,7 +159,7 @@ int dofile(char *file, time_t ctime)
       if(getln(&b, &line, &match, '\n') == -1)
 	{
 	  strerr_warn3("unable to read line: ", file, " ", &strerr_sys);
-	  return;
+	  return -1;
 	}
       
       /* clean up line end */
@@ -234,7 +238,8 @@ int dofile(char *file, time_t ctime)
 		  buffer_puts(buffer_2, ")\n");
 		  buffer_flush(buffer_2);
 		  /* the file is deleted so we don't have to read further from it */
-		  return;
+		  // XXX leaking a filediscriptor
+		  return 0;
 		}
 	    }
 	}
@@ -242,7 +247,7 @@ int dofile(char *file, time_t ctime)
 
   close(fd);
 
-  return;
+  return 0;
 }
 
 int dodir(char *dirname)

@@ -1,6 +1,10 @@
-/* $Id: ddns.h,v 1.9 2000/07/29 21:45:53 drt Exp $
+/* $Id: ddns.h,v 1.10 2000/07/31 19:15:56 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.10  2000/07/31 19:15:56  drt
+ * ddns-file(5) format changed
+ * a lot of restructuring
+ *
  * Revision 1.9  2000/07/29 21:45:53  drt
  * added stralloc_free()
  * changed uint32 reserved[] to char reserved[]
@@ -46,6 +50,7 @@
 #include "uint64.h"
 #include "tai.h"
 #include "taia.h"
+#include "stralloc.h"
 
 #ifndef NULL
  #define NULL 0
@@ -70,7 +75,6 @@
 #define DDNSREPLYSIZE 68
 
 #define NUMFIELDS 10
-#define ACLWFIFONAME "machkeinscheiss"
 
 struct ddnsrequest {
   uint32 uid;
@@ -106,6 +110,22 @@ struct ddnsreply {
   struct taia timestamp;                   // 192
  };
 
-#define stralloc_free(sa)  alloc_free((sa)->s); (int)(sa)->s = (sa)->len = (sa)->a = 0;
+/* definition foe standard C functions */
+/* I dont want to include headers which include 
+   headers which include headers which include stuff 
+   I don't understans */
+
+extern int close(int);
+extern int chdir(const char *);
+extern int chroot(const char *);
+extern int unlink(const char *);
+
+extern void stralloc_free(stralloc *sa);  
+extern void stralloc_cleanlineend(stralloc *line);
+
+extern int fieldsep(stralloc f[], int numfields, stralloc *line, char sepchar);
+extern void ddns_parseline(char *s, uint32 *uid, char *ip4, char *ip6, char *loc);
+extern void openandwrite(char *filename, stralloc *sa);
+extern int write_fifodir(char *dirname, stralloc *sa, void (*openandwrite)(char *filename, stralloc *sa));
 
 #endif

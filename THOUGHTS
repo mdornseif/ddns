@@ -1,0 +1,6 @@
+
+
+* stralloc is leaking memory all over the place. This might pose an
+  problem on long running servers. Perhaps I should use a garbage
+  collector.
+

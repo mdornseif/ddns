@@ -1,4 +1,4 @@
-/* $Id: ddns-cleand-conf.c,v 1.1 2000/07/29 21:12:50 drt Exp $
+/* $Id: ddns-cleand-conf.c,v 1.2 2000/07/31 19:15:56 drt Exp $
  *  --drt@ailis.de
  *
  * create directory structure for using ddns-cleand with svscan
@@ -9,6 +9,10 @@
  * I do not belive there is a thing like copyright.
  *
  * $Log: ddns-cleand-conf.c,v $
+ * Revision 1.2  2000/07/31 19:15:56  drt
+ * ddns-file(5) format changed
+ * a lot of restructuring
+ *
  * Revision 1.1  2000/07/29 21:12:50  drt
  * initial revision
  *
@@ -16,13 +20,16 @@
 
 #include <pwd.h>
 #include <unistd.h>
-#include "strerr.h"
-#include "exit.h"
+
 #include "auto_home.h"
+#include "exit.h"
 #include "generic-conf.h"
+#include "stralloc.h"
+#include "strerr.h"
+
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand-conf.c,v 1.1 2000/07/29 21:12:50 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand-conf.c,v 1.2 2000/07/31 19:15:56 drt Exp $";
 
 #define FATAL "ddns-cleand-conf: fatal: "
 

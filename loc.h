@@ -1,4 +1,4 @@
-/* $Id: loc.h,v 1.3 2000/07/29 21:35:27 drt Exp $
+/* $Id: loc.h,v 1.4 2000/07/31 19:15:56 drt Exp $
  *
  * header for DNS LOC handling routines
  *  -- drt@ailis.de
@@ -8,6 +8,10 @@
  * You might find more information at http://rc23.cx/
  *
  * $Log: loc.h,v $
+ * Revision 1.4  2000/07/31 19:15:56  drt
+ * ddns-file(5) format changed
+ * a lot of restructuring
+ *
  * Revision 1.3  2000/07/29 21:35:27  drt
  * removed snprintf()
  *
@@ -43,3 +47,9 @@ int loc_aton(char *ascii, struct loc_s *loc);
 
 /* struct loc_s and emits it in a human readable format. */
 char *loc_ntoa(struct loc_s *loc, stralloc *sa);
+
+/* converts a struct loc_s to a RfC 1876 RR */
+void loc_pack_big(char *b, struct loc_s *loc);
+
+/* converts a RfC 1876 RR to a struct loc_s */
+void loc_unpack_big(char *b, struct loc_s *loc);

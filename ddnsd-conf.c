@@ -1,4 +1,4 @@
-/* $Id: ddnsd-conf.c,v 1.1 2000/07/29 21:12:50 drt Exp $
+/* $Id: ddnsd-conf.c,v 1.2 2000/07/31 19:15:56 drt Exp $
  *  --drt@ailis.de
  *
  * create directory structure for using ddnsd with svscan
@@ -10,6 +10,10 @@
  * I do not belive there is a thing like copyright.
  *
  * $Log: ddnsd-conf.c,v $
+ * Revision 1.2  2000/07/31 19:15:56  drt
+ * ddns-file(5) format changed
+ * a lot of restructuring
+ *
  * Revision 1.1  2000/07/29 21:12:50  drt
  * initial revision
  *
@@ -24,7 +28,7 @@
 #include "generic-conf.h"
 #include "ddns.h"
 
-static char rcsid[]="$Id: ddnsd-conf.c,v 1.1 2000/07/29 21:12:50 drt Exp $";
+static char rcsid[]="$Id: ddnsd-conf.c,v 1.2 2000/07/31 19:15:56 drt Exp $";
 
 #define FATAL "ddnsd-conf: fatal: "
 
@@ -156,6 +160,10 @@ int main(int argc, char **argv)
 
   makedir("root/dot");
   perm(02750);
+  owner(pw->pw_uid,pw->pw_gid);
+
+  makedir("root/tracedir");
+  perm(02770);
   owner(pw->pw_uid,pw->pw_gid);
 
   mkdnsdirhier("root/dot", myzone);
