@@ -1,10 +1,13 @@
-/* $Id: ddnsc.c,v 1.1 2000/04/17 16:18:35 drt Exp $
+/* $Id: ddnsc.c,v 1.2 2000/04/21 06:58:36 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
- * Revision 1.1  2000/04/17 16:18:35  drt
- * Initial revision
+ * Revision 1.2  2000/04/21 06:58:36  drt
+ * *** empty log message ***
+ *
+ * Revision 1.1.1.1  2000/04/17 16:18:35  drt
+ * initial ddns version
  *
  */
 
@@ -117,11 +120,9 @@ int ddnsc_recive(struct ddnsreply *p)
   r = timeoutread(60, 6, &ptmp, sizeof(struct ddnsreply));
   /* XXX: check result */
 
-  dump_packet(&ptmp, "frisch empfangen");
-
   uint32_unpack((char*) &ptmp.uid, &p->uid);
   
-  /* XXX: check for my userid */
+  /* XXX: check for my own userid */
 
   /* initialize rijndael with 256 bit blocksize and 128 bit keysize */
   rijndaelKeySched(8, 4, key);
@@ -205,14 +206,72 @@ main()
 
   switch(r.type)
     {
-    case DDNS_T_ACK:       
-      dump_packet(&r, "ACK");
-      break;
-    case DDNS_T_NAK:       
-      dump_packet(&r, "NAK");
-      break;
-    default:
-      dump_packet(&r, "unknown packet");
+    case DDNS_T_ACK: dump_packet(&r, "ACK"); break;
+    case DDNS_T_NAK: dump_packet(&r, "NAK"); break;
+    case DDNS_T_ESERVINT: dump_packet(&r, "ESINT"); break;
+    case DDNS_T_EPROTERROR: dump_packet(&r, "ESINT"); break;   
+    case DDNS_T_EWRONGMAGIC: dump_packet(&r, "EWMAG"); break;  
+    case DDNS_T_ECANTDECRYPT: dump_packet(&r, "ECDEC"); break; 
+    case DDNS_T_EALLREADYUSED: dump_packet(&r, "EUSED"); break;
+    case DDNS_T_EUNKNOWNUID: dump_packet(&r, "EUNID"); break;  
+    case DDNS_T_EUNSUPPTYPE: dump_packet(&r, "EUNSR"); break;  
+    default: dump_packet(&r, "unknown packet");
+    }
+
+  sleep(1);
+  sleep(2);
+
+  p.type = DDNS_T_RENEWENTRY;
+  ddnsc_send(&p);
+  ddnsc_recive(&r);
+  switch(r.type)
+    {
+    case DDNS_T_ACK: dump_packet(&r, "ACK"); break;
+    case DDNS_T_NAK: dump_packet(&r, "NAK"); break;
+    case DDNS_T_ESERVINT: dump_packet(&r, "ESINT"); break;
+    case DDNS_T_EPROTERROR: dump_packet(&r, "ESINT"); break;   
+    case DDNS_T_EWRONGMAGIC: dump_packet(&r, "EWMAG"); break;  
+    case DDNS_T_ECANTDECRYPT: dump_packet(&r, "ECDEC"); break; 
+    case DDNS_T_EALLREADYUSED: dump_packet(&r, "EUSED"); break;
+    case DDNS_T_EUNKNOWNUID: dump_packet(&r, "EUNID"); break;  
+    case DDNS_T_EUNSUPPTYPE: dump_packet(&r, "EUNSR"); break;  
+    default: dump_packet(&r, "unknown packet");
+    }
+
+  exit(1);
+
+  p.type = DDNS_T_KILLENTRY;
+  ddnsc_send(&p);
+  ddnsc_recive(&r);
+  switch(r.type)
+    {
+    case DDNS_T_ACK: dump_packet(&r, "ACK"); break;
+    case DDNS_T_NAK: dump_packet(&r, "NAK"); break;
+    case DDNS_T_ESERVINT: dump_packet(&r, "ESINT"); break;
+    case DDNS_T_EPROTERROR: dump_packet(&r, "ESINT"); break;   
+    case DDNS_T_EWRONGMAGIC: dump_packet(&r, "EWMAG"); break;  
+    case DDNS_T_ECANTDECRYPT: dump_packet(&r, "ECDEC"); break; 
+    case DDNS_T_EALLREADYUSED: dump_packet(&r, "EUSED"); break;
+    case DDNS_T_EUNKNOWNUID: dump_packet(&r, "EUNID"); break;  
+    case DDNS_T_EUNSUPPTYPE: dump_packet(&r, "EUNSR"); break;  
+    default: dump_packet(&r, "unknown packet");
+    }
+
+  p.type = DDNS_T_RENEWENTRY;
+  ddnsc_send(&p);
+  ddnsc_recive(&r);
+  switch(r.type)
+    {
+    case DDNS_T_ACK: dump_packet(&r, "ACK"); break;
+    case DDNS_T_NAK: dump_packet(&r, "NAK"); break;
+    case DDNS_T_ESERVINT: dump_packet(&r, "ESINT"); break;
+    case DDNS_T_EPROTERROR: dump_packet(&r, "ESINT"); break;   
+    case DDNS_T_EWRONGMAGIC: dump_packet(&r, "EWMAG"); break;  
+    case DDNS_T_ECANTDECRYPT: dump_packet(&r, "ECDEC"); break; 
+    case DDNS_T_EALLREADYUSED: dump_packet(&r, "EUSED"); break;
+    case DDNS_T_EUNKNOWNUID: dump_packet(&r, "EUNID"); break;  
+    case DDNS_T_EUNSUPPTYPE: dump_packet(&r, "EUNSR"); break;  
+    default: dump_packet(&r, "unknown packet");
     }
   
   exit(0);

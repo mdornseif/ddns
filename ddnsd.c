@@ -1,8 +1,11 @@
-/* $Id: ddnsd.c,v 1.2 2000/04/19 13:36:23 drt Exp $
+/* $Id: ddnsd.c,v 1.3 2000/04/21 06:58:36 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.3  2000/04/21 06:58:36  drt
+ * *** empty log message ***
+ *
  * Revision 1.2  2000/04/19 13:36:23  drt
  * Compile fixes
  *
@@ -70,7 +73,7 @@ void ddnsd_send_err(uint32 uid, uint16 errtype, char *errstr)
   p.type = errtype;
   p.uid = uid;
 
-  /* leasetime is unused so we fill it with random data */
+  /* leasetime is unused when sending error packets so we fill it with random data */
   p.leasetime.x = (uint64) (randomMT() & (uint64)((uint64)randomMT() << 32));
 
   /* Do logging */
@@ -98,7 +101,7 @@ void ddnsd_send_err_sys(uint32 uid, char *errstr)
   stralloc err = { 0 };
 
   stralloc_copys(&err, errstr);
-  stralloc_cats(&err, " ");
+  stralloc_cats(&err, ": ");
   stralloc_cats(&err, error_str(errno));
   stralloc_0(&err);
   ddnsd_send_err(uid, DDNS_T_ESERVINT, err.s);
@@ -149,7 +152,7 @@ int ddnsd_find_user(struct ddnsrequest *p, stralloc *sa)
       stralloc_ready(sa, cdb_datalen(&c));
       if (cdb_read(&c, sa->s, cdb_datalen(&c), cdb_datapos(&c)) == -1)
 	{
-	  ddnsd_send_err(p->uid, DDNS_T_ESERVINT, "can't read from data.cdb");
+	  ddnsd_send_err_sys(p->uid, "can't read from data.cdb");
 	}
       else
 	{
@@ -179,7 +182,6 @@ int ddnsd_recive(struct ddnsrequest *p)
   r = timeoutread(60, 0, &ptmp, sizeof(struct ddnsrequest));
   /* XXX: check result */
 
-  dump_packet(&ptmp, "frisch empfangen");
   uint32_unpack((char*) &ptmp.uid, &p->uid);
   
   ddnsd_find_user(p, &data);
@@ -221,6 +223,8 @@ void ddnsd_setentry( struct ddnsrequest *p)
   int fd = 0;
   int pos = 0;
   stralloc tmpname = { 0 };
+  stralloc err = { 0 };
+  stralloc finname = { 0 };
   char inbuf[BUFFER_INSIZE];
   char outbuf[BUFFER_OUTSIZE];
   buffer ssin;
@@ -228,17 +232,61 @@ void ddnsd_setentry( struct ddnsrequest *p)
   char strip[IP4_FMT];
   buffer ssout;
 
+  
   /* create a temporary name */
-  stralloc_copys(&tmpname, datadir);
-  stralloc_cats(&tmpname, "/");
-  stralloc_cat(&tmpname, &username);
-  stralloc_0(&tmpname);
+  host[0] = 0;
+  gethostname(host,sizeof(host));
+  for (loop = 0;;++loop)
+    {
+      stralloc_copys(&tmpname, "tmp/");
+      stralloc_catulong0(&tmpname, now(),0); 
+      stralloc_cats(&tmpname, "."); 
+      stralloc_catulong0(&tmpname, getpid(), 0); 
+      stralloc_cats(&tmpname, "."); 
+      stralloc_cats(&tmpname, host); 
+      stralloc_0(&tmpname);
+      
+      if (stat(tmpname.s,&st) == -1) if (errno == error_noent) break;
+      /* really should never get to this point */
+      if (loop == 2) _exit(1); /* XXX: logging */
+      sleep(1);
+    }
+	  
 
-  if (stat(tmpname.s,&st) == -1) 
+  /* create the final name */
+  stralloc_copys(&finname, datadir);
+  stralloc_cats(&finname, "/");
+  stralloc_cat(&finname, &username);
+  stralloc_0(&finname);
+    
+
+  /* open tmpfile and write to it */
+  fd = open_excl(tmpname.s);
+
+  if(fd == -1)
+    {
+      ddnsd_send_err_sys(p->uid, tmpname.s);
+    }
+  
+  /* XXX: we need checks if the user is comming from the claimed ip */
+
+  /* write data to file */
+  buffer_init(&ssout,write, fd, outbuf, sizeof outbuf);
+  buffer_puts(&ssout, "=");
+  buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip));
+  buffer_puts(&ssout, ":");
+  buffer_put(&ssout, strnum, fmt_xlong(strnum, p->uid));
+  buffer_puts(&ssout, "\n");
+  buffer_flush(&ssout); 
+
+  close(fd);
+
+  /* test if the name we are asked to move to is already there */
+  if (stat(finname.s, &st) == -1) 
     {
       if(errno != ENOENT)
 	{
-	  ddnsd_send_err_sys(p->uid, tmpname.s);
+	  ddnsd_send_err_sys(p->uid, finname.s);
 	}
       /* else: everything is fine, the File doesn't exist */
     }
@@ -246,29 +294,74 @@ void ddnsd_setentry( struct ddnsrequest *p)
     {
       ddnsd_send_err(p->uid, DDNS_T_EALLREADYUSED, "allready registered");
     }
-  
+
+  /* move tmp file to final file */
+
   /* do we have a race condition here? */
   /* Yes, but the only harm this race can cause ist that a user 
      gets DDNS_T_ESERVINT instead of DDNS_T_EALLREADYUSED 
   */
-  
-  fd = open_excl(tmpname.s);
 
-  if(fd == -1)
+  if(rename(tmpname.s, finname.s) != 0)
     {
-      ddnsd_send_err_sys(p->uid, tmpname.s);
-    }
+      /* try to delete tmpfile */
+      // unlink(tmpname.s);
 
-  buffer_init(&ssout,write, fd, outbuf, sizeof outbuf);
-  buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip));
-  buffer_puts(&ssout, ":");
-  buffer_put(&ssout, strnum, fmt_xlong(strnum, p->uid));
-  buffer_puts(&ssout, "\n");
-  buffer_flush(&ssout); 
+      /* return error */
+      stralloc_copys(&err, "can't rename ");
+      stralloc_cats(&err, tmpname.s);
+      stralloc_cats(&err, " to ");
+      stralloc_cat(&err, &finname);
+      ddnsd_send_err_sys(p->uid, err.s);
+    }
   
+  /* construct the answer Packet */
   r.type = DDNS_T_ACK;
   r.uid = p->uid;
+  /* there should be some more intelligence in setting leasetime */
   r.leasetime.x = 2317;	 
+  ddnsd_send(&r);  
+}
+
+/* handle a setentryrequest */
+void ddnsd_renewentry( struct ddnsrequest *p)
+{
+  struct ddnsreply r = { 0 };
+  stralloc tmpname = { 0 };
+
+  /* create the final name */
+  stralloc_copys(&tmpname, datadir);
+  stralloc_cats(&tmpname, "/");
+  stralloc_cat(&tmpname, &username);
+  stralloc_0(&tmpname);
+
+  utime(tmpname.s, NULL);
+
+  /* construct the answer Packet */
+  r.type = DDNS_T_ACK;
+  r.uid = p->uid;
+  /* there should be some more intelligence in setting leasetime */
+  r.leasetime.x = 2317;	 
+  ddnsd_send(&r);  
+}
+
+void ddnsd_killentry( struct ddnsrequest *p)
+{
+  struct ddnsreply r = { 0 };
+  stralloc tmpname = { 0 };
+
+  /* create the final name */
+  stralloc_copys(&tmpname, datadir);
+  stralloc_cats(&tmpname, "/");
+  stralloc_cat(&tmpname, &username);
+  stralloc_0(&tmpname);
+
+  unlink(tmpname.s);
+
+  /* construct the answer Packet */
+  r.type = DDNS_T_ACK;
+  r.uid = p->uid;
+  r.leasetime.x = (uint64) (randomMT() & (uint64)((uint64)randomMT() << 32));
   ddnsd_send(&r);  
 }
 
@@ -317,10 +410,11 @@ main()
   switch(p.type)
     {
     case DDNS_T_SETENTRY:
-    case 234545:
       ddnsd_setentry(&p);
       break;
     case DDNS_T_RENEWENTRY:
+      ddnsd_renewentry(&p);
+      break;
     case DDNS_T_KILLENTRY:       
       r.type = DDNS_T_NAK;
       r.uid = p.uid;

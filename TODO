@@ -2,3 +2,5 @@ clean up sourcecode
 * ipv6 support
 * fix build process. At the moment one has to do "cd djblib; make;
   cd ../lib; make; cd .." before building.
+* fix Makefiles
+* fix encryption with internal server errors
