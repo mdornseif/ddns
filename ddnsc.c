@@ -1,8 +1,14 @@
-/* $Id: ddnsc.c,v 1.9 2000/07/07 13:32:47 drt Exp $
+/* $Id: ddnsc.c,v 1.10 2000/07/12 11:34:25 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.10  2000/07/12 11:34:25  drt
+ * ddns-clientd handels now everything itself.
+ * ddnsc is now linked to ddnsd-clientd, do a
+ * enduser needs just this single executable
+ * and no ucspi-tcp/tcpclient.
+ *
  * Revision 1.9  2000/07/07 13:32:47  drt
  * ddnsd and ddnsc now basically work as they should and are in
  * a usable state. The protocol is changed a little bit to lessen
@@ -39,34 +45,27 @@
  *
  */
 
-#include <stdlib.h>    /* random, clock */
-#include <time.h>      /* time */
-#include <unistd.h>    /* close, getpid, getppid */
-
 #include "buffer.h"
 #include "byte.h"
 #include "env.h"
 #include "error.h"
 #include "fmt.h"
 #include "ip4.h"
-#include "pad.h"
 #include "scan.h"
 #include "stralloc.h"
 #include "strerr.h"
 #include "timeoutread.h"
 #include "timeoutwrite.h"
-#include "txtparse.h"
 
 #include "mt19937.h"
 #include "rijndael.h"
+#include "loc.h"
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsc.c,v 1.9 2000/07/07 13:32:47 drt Exp $";
+static char rcsid[] = "$Id: ddnsc.c,v 1.10 2000/07/12 11:34:25 drt Exp $";
 
-#define FATAL "ddnsc: "
-
-stralloc key = {0};
+#define FATAL "ddns-client: "
 
 int fd;
 buffer b;
@@ -146,7 +145,7 @@ int ddnsc_recive(struct ddnsreply *p)
 }
 
 /* fill p with random, timestamp, magic, encrypt it and send it */
-static void ddnsc_send(struct ddnsrequest *p)
+static void ddnsc_send(struct ddnsrequest *p, char *key)
 {
   struct taia t;
   struct ddnsrequest ptmp = {0};
@@ -167,126 +166,50 @@ static void ddnsc_send(struct ddnsrequest *p)
   ptmp.loc_size = p->loc_size;
   ptmp.loc_hpre = p->loc_hpre;
   ptmp.loc_vpre = p->loc_vpre;
-  ptmp.random1 = randomMT() & 0xffff;
-  ptmp.random2 = randomMT() & 0xffff;
+  ptmp.random1 = ptmp.random2 = randomMT() & 0xffff;
   /* fill reserved with random data */
   ptmp.reserved1 = randomMT() & 0xff;;
   ptmp.reserved2 = randomMT() & 0xffff;
 
-
   /* initialize rijndael with 256 bit blocksize and 256 bit keysize */
-  rijndaelKeySched(8, 8, key.s);
+  rijndaelKeySched(8, 8, key);
     
   /* Encrypt with rijndael */
   rijndaelEncrypt((char *) &ptmp.type);
   rijndaelEncrypt((char *) &ptmp.type + 32);  
 
+  /* XXX: Why use bufferd I/O? */
   buffer_put(&netwrite, (char *) &ptmp, sizeof(struct ddnsrequest));
   buffer_flush(&netwrite); 
 }
 
-int main(int argc, char **argv)
+/* handle client <-> server communication */
+int ddnsc(int type, uint32 uid, char *ip4, char *ip6, struct loc_s *loc, char *key, uint32 *ttl)
 {
   struct ddnsrequest p = {0};
   struct ddnsreply r = {0};
   unsigned char ip[4] = {0};
-  uint32 uid = 0;
   int a;
   char *x;
   char strnum[FMT_ULONG];
-
-  /* seed some entropy into the MT */
-  seedMT((long long) getpid () *
-	 (long long) time(0) *
-	 (long long) getppid() * 
-	 (long long) random() * 
-	 (long long) clock());
-
-  if(argc != 4)
-    die_usage();
   
-  scan_ulong(argv[1], &uid);
-  if(!uid) die_usage();
-
-  a = ip4_scan(argv[2], ip);
-  if((uint32 *)ip == 0) die_usage();
-  
-  if(*argv[3] == 's')
-    p.type = DDNS_T_SETENTRY;
-  else if(*argv[3] == 'r')
-    p.type = DDNS_T_RENEWENTRY;
-  else if(*argv[3] == 'k')
-    p.type = DDNS_T_KILLENTRY;
-  else 
-    die_usage();
-  
-  /* get key from enviroment */
-  x = env_get("KEY");
-  if (!x)
-    {
-      strerr_die2x(111, FATAL, "$KEY not set");
-    }
-
-  stralloc_copys(&key, x);
-  txtparse(&key);
-  pad(&key, 32);
-
+  p.type = type;
   p.uid = uid;
-  byte_copy(&p.ip4[0], 4, ip);
-
-  // XXX: put something useful here
-  byte_copy(&p.ip6[0], 16, "1234567890abcdef");
-  p.loc_lat = 70;
-  p.loc_long = 60;
-  p.loc_alt = 70;
-  p.loc_size = 60;
-  p.loc_hpre = 70;
-  p.loc_vpre = 60;
+  byte_copy(&p.ip4[0], sizeof(p.ip4), ip4);
+  byte_copy(&p.ip6[0], sizeof(p.ip4), ip6);
+  p.loc_lat = loc->latitude;
+  p.loc_long = loc->longitude;
+  p.loc_alt = loc->altitude;
+  p.loc_size = loc->size;
+  p.loc_hpre = loc->hpre;
+  p.loc_vpre = loc->vpre;
   
   /* send request */
-  ddnsc_send(&p);
+  ddnsc_send(&p, key);
 
   /* get answer */
   ddnsc_recive(&r);
 
-  switch(r.type)
-    {
-    case DDNS_T_ACK: 
-      buffer_puts(buffer_1, "ACK: leasetime ");
-      buffer_put(buffer_1, strnum, fmt_ulong(strnum, r.leasetime));
-      buffer_puts(buffer_1, "\n");
-      break;
-    case DDNS_T_NAK: 
-      buffer_puts(buffer_1, "NAK: mail drt@ailis.de\n"); 
-      break;
-    case DDNS_T_ESERVINT: 
-      buffer_puts(buffer_1, "EIN: internal server error\n"); 
-      break;
-    case DDNS_T_EPROTERROR: 
-      buffer_puts(buffer_1, "EPR: mail drt@ailis.de\n"); 
-      break;   
-    case DDNS_T_EWRONGMAGIC: 
-      buffer_puts(buffer_1, "EWM: server thinks we send him a message with bad magic\n");
-      break;  
-    case DDNS_T_ECANTDECRYPT: 
-      buffer_puts(buffer_1, "EDC: server can not decrypt our message\n"); 
-      break; 
-    case DDNS_T_EALLREADYUSED: 
-      buffer_puts(buffer_1, "EUD: uid has already registered an ip\n"); 
-      break;
-    case DDNS_T_EUNKNOWNUID: 
-      buffer_puts(buffer_1, "EID: uid is unknown to the server\n"); 
-      break;  
-    case DDNS_T_ENOENTRYUSED:
-	buffer_puts(buffer_1, "ENE: client requsted to renew/kill something which is not set\n");
-	break;
-    case DDNS_T_EUNSUPPTYPE: 
-      buffer_puts(buffer_1, "EUS: \n"); 
-      break;  
-    default:
-      strerr_die1x(100, "unknown packet");
-    }
-  buffer_flush(buffer_1);  
-  
-  return 0;
+  *ttl = r.leasetime;
+  return r.type;
 }

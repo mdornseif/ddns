@@ -1,4 +1,4 @@
-/* $Id: loc.c,v 1.2 2000/07/11 19:54:58 drt Exp $
+/* $Id: loc.c,v 1.3 2000/07/12 11:34:25 drt Exp $
  *  -- drt@ailis.de
  * 
  * handling of LOC data 
@@ -14,6 +14,12 @@
  * seconds - how baroqe!
  * 
  * $Log: loc.c,v $
+ * Revision 1.3  2000/07/12 11:34:25  drt
+ * ddns-clientd handels now everything itself.
+ * ddnsc is now linked to ddnsd-clientd, do a
+ * enduser needs just this single executable
+ * and no ucspi-tcp/tcpclient.
+ *
  * Revision 1.2  2000/07/11 19:54:58  drt
  * I have thrown away my own LOC parser and used the one from
  * RfC 1876. Changed it to use strallocs and a structure and
@@ -25,7 +31,7 @@
  *
  */
 
-static char rcsid[] = "$Id: loc.c,v 1.2 2000/07/11 19:54:58 drt Exp $";
+static char rcsid[] = "$Id: loc.c,v 1.3 2000/07/12 11:34:25 drt Exp $";
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -186,7 +192,7 @@ static uint32 latlon2ul(char **latlonstrptr, int* which)
 
 /* converts a zone file representation in a string to an RDATA
  * on-the-wire representation. */
-uint32 loc_aton(const char *ascii, struct loc_s *loc)
+int loc_aton(const char *ascii, struct loc_s *loc)
 {
   const char *cp, *maxcp;
   

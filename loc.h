@@ -1,4 +1,4 @@
-/* $Id: loc.h,v 1.1 2000/07/11 19:54:59 drt Exp $
+/* $Id: loc.h,v 1.2 2000/07/12 11:34:25 drt Exp $
  *
  * header for DNS LOC handling routines
  *  -- drt@ailis.de
@@ -6,6 +6,12 @@
  * (K)opyright is Myth
  * 
  * $Log: loc.h,v $
+ * Revision 1.2  2000/07/12 11:34:25  drt
+ * ddns-clientd handels now everything itself.
+ * ddnsc is now linked to ddnsd-clientd, do a
+ * enduser needs just this single executable
+ * and no ucspi-tcp/tcpclient.
+ *
  * Revision 1.1  2000/07/11 19:54:59  drt
  * I have thrown away my own LOC parser and used the one from
  * RfC 1876. Changed it to use strallocs and a structure and
@@ -27,10 +33,8 @@ struct loc_s {
   uint32 altitude;
 };
 
-/* converts a zone file representation in a string to an RDATA
- * on-the-wire representation. */
-uint32 loc_aton(const char *ascii, struct loc_s *loc);
+/* converts a zone file representation in a string to an struct loc_s */
+int loc_aton(const char *ascii, struct loc_s *loc);
 
-/* takes an on-the-wire LOC RR and prints it in zone file
- * (human readable) format. */
+/* struct loc_s and emits it in a human readable format. */
 char *loc_ntoa(struct loc_s *loc, stralloc *sa);

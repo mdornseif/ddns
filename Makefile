@@ -1,3 +1,5 @@
+# $Id
+
 DOWNLOADER = "wget"
 
 CFLAGS=-g -Wall -Idnscache -Ilibtai
@@ -6,7 +8,7 @@ defaut: client daemon
 
 daemon: libs ddnsd ddnsd-data ddns-cleand filedns
 
-client: libs ddnsc
+client: libs ddns-clientd
 
 ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o rijndael.o mt19937.o dnscache.a libtai.a 
 	gcc -o $@ $^
@@ -15,7 +17,8 @@ ddns-cleand: ddns-cleand.o scan_xlong.o \
 sig_alarm.o sig_block.o sig_catch.o now.o dnscache.a libtai.a 
 	gcc -o $@ ddns-cleand.o scan_xlong.o sig_alarm.o sig_block.o sig_catch.o now.o dnscache.a libtai.a 
 
-ddnsc: ddnsc.o fmt_xint.o fmt_xlong.o rijndael.o mt19937.o pad.o txtparse.o dnscache.a libtai.a 
+ddns-clientd: ddns-clientd.o ddnsc.o loc.o fmt_xint.o fmt_xlong.o rijndael.o mt19937.o pad.o txtparse.o dnscache.a libtai.a \
+sig.o sig_catch.o sig_block.o sig_term.o sig_alarm.o fd_move.o fd_copy.o timeoutconn.o dnscache/ndelay_off.o
 	gcc -o $@ $^
 
 ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libtai.a
