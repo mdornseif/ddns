@@ -1,5 +1,5 @@
-/* $Id: ddns-clientd.c,v 1.14 2000/11/17 02:00:41 drt Exp $
- *  -- drt@ailis.de
+/* $Id: ddns-clientd.c,v 1.15 2000/11/21 19:41:23 drt Exp $
+ *  -- drt@un.bewaff.net
  * 
  * client for ddns
  *
@@ -8,6 +8,9 @@
  * This file is to long!
  *
  * $Log: ddns-clientd.c,v $
+ * Revision 1.15  2000/11/21 19:41:23  drt
+ * Logging not only to stderr but sometimes to stdout.
+ *
  * Revision 1.14  2000/11/17 02:00:41  drt
  * one shot mode for ddns-clientd
  *
@@ -92,7 +95,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.14 2000/11/17 02:00:41 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.15 2000/11/21 19:41:23 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 #define ARGV0 "ddns-clientd: "
@@ -129,10 +132,10 @@ void sigalrm() { flagalarmed++; }
 /* log an informational message to stderr */
 void log(char *s)
 {
-  buffer_puts(buffer_2, "ddns-clientd: ");
-  buffer_puts(buffer_2, s);
-  buffer_puts(buffer_2, "\n");
-  buffer_flush(buffer_2);
+  buffer_puts(buffer_1, "ddns-clientd: ");
+  buffer_puts(buffer_1, s);
+  buffer_puts(buffer_1, "\n");
+  buffer_flush(buffer_1);
 }
 
 /* log the returncode we've got back */
@@ -143,41 +146,41 @@ void log_retuncode(int r)
   switch(r)
     {
     case DDNS_T_ACK: 
-      buffer_puts(buffer_2, "ACK: leasetime ");
+      buffer_puts(buffer_1, "ACK: leasetime ");
       //  XXX buffer_put(buffer_1, strnum, fmt_ulong(strnum, r.leasetime));
-      buffer_puts(buffer_2, "\n");
+      buffer_puts(buffer_1, "\n");
       break;
     case DDNS_T_NAK: 
-      buffer_puts(buffer_2, "NAK: mail drt@ailis.de\n"); 
+      buffer_puts(buffer_1, "NAK: mail drt@un.bewaff.net\n"); 
       break;
     case DDNS_T_ESERVINT: 
-      buffer_puts(buffer_2, "EIN: internal server error\n"); 
+      buffer_puts(buffer_1, "EIN: internal server error\n"); 
       break;
     case DDNS_T_EPROTERROR: 
-      buffer_puts(buffer_2, "EPR: mail drt@ailis.de\n"); 
+      buffer_puts(buffer_1, "EPR: mail drt@un.bewaff.net\n"); 
       break;   
     case DDNS_T_EWRONGMAGIC: 
-      buffer_puts(buffer_2, "EWM: server thinks we send him a message with bad magic\n");
+      buffer_puts(buffer_1, "EWM: server thinks we send him a message with bad magic\n");
       break;  
     case DDNS_T_ECANTDECRYPT: 
-      buffer_puts(buffer_2, "EDC: server can not decrypt our message\n"); 
+      buffer_puts(buffer_1, "EDC: server can not decrypt our message\n"); 
       break; 
     case DDNS_T_EALLREADYUSED: 
-      buffer_puts(buffer_2, "EUD: uid has already registered an ip\n"); 
+      buffer_puts(buffer_1, "EUD: uid has already registered an ip\n"); 
       break;
     case DDNS_T_EUNKNOWNUID: 
-      buffer_puts(buffer_2, "EID: uid is unknown to the server\n"); 
+      buffer_puts(buffer_1, "EID: uid is unknown to the server\n"); 
       break;  
     case DDNS_T_ENOENTRYUSED:
-	buffer_puts(buffer_2, "ENE: client requsted to renew/kill something which is not set\n");
-	break;
+      buffer_puts(buffer_1, "ENE: client requsted to renew/kill something which is not set\n");
+      break;
     case DDNS_T_ETIMESWRONG: 
-      buffer_puts(buffer_2, "ETW: timestamp is wrong. Check your local clock!\n"); 
+      buffer_puts(buffer_1, "ETW: timestamp is wrong. Check your local clock!\n"); 
       break;  
     default:
       strerr_die1x(100, "unknown packet");
     }
-  buffer_flush(buffer_2);  
+  buffer_flush(buffer_1);  
 }
 
 /* basically an emebbed tcpclient */
@@ -197,8 +200,8 @@ int buildup_connection(char *ip, uint16 p)
     {
       if(i > 1)
 	{
-	  buffer_puts(buffer_2, "ddns-clientd: retrying connection in a few seconds\n");
-	  buffer_flush(buffer_2);
+	  buffer_puts(buffer_1, "ddns-clientd: retrying connection in a few seconds\n");
+	  buffer_flush(buffer_1);
 	  sleep(i * 3);
 	}
 
@@ -247,10 +250,10 @@ static int call_ddnsc(int action)
   if(byte_equal(ip4, 4, "\0\0\0\1"))
   {
     byte_copy(ip4, 4, iplocal);
-    buffer_puts(buffer_2, "ddns-clientd: rewriting 0.0.0.1 to ");
-    buffer_put(buffer_2, strip, ip4_fmt(strip, ip4));
-    buffer_puts(buffer_2, "\n");
-    buffer_flush(buffer_2);
+    buffer_puts(buffer_1, "ddns-clientd: rewriting 0.0.0.1 to ");
+    buffer_put(buffer_1, strip, ip4_fmt(strip, ip4));
+    buffer_puts(buffer_1, "\n");
+    buffer_flush(buffer_1);
     flagleaveipalone = 0;
   }
      
@@ -259,10 +262,10 @@ static int call_ddnsc(int action)
   if((tmpttl != ttl) && (tmpttl != ttl))
     {
       ttl = tmpttl;
-      buffer_puts(buffer_2, "ddns-clientd: changing leasetime to ");
-      buffer_put(buffer_2, strnum, fmt_ulong(strnum, ttl));
-      buffer_puts(buffer_2, "\n");
-      buffer_flush(buffer_2);
+      buffer_puts(buffer_1, "ddns-clientd: changing leasetime to ");
+      buffer_put(buffer_1, strnum, fmt_ulong(strnum, ttl));
+      buffer_puts(buffer_1, "\n");
+      buffer_flush(buffer_1);
     }
 
   teardown_connection();
@@ -280,12 +283,12 @@ static int set_entry()
   
   if(byte_diff(ip4, 4, iplocal))
     {
-      buffer_puts(buffer_2, "ddns-clientd: warning: announced ip (");
-      buffer_put(buffer_2, strip, ip4_fmt(strip, ip4));
-      buffer_puts(buffer_2, ") is different from ip we actually use (");
-      buffer_put(buffer_2, strip, ip4_fmt(strip, iplocal));
-      buffer_puts(buffer_2, ")\n");
-      buffer_flush(buffer_2);
+      buffer_puts(buffer_1, "ddns-clientd: warning: announced ip (");
+      buffer_put(buffer_1, strip, ip4_fmt(strip, ip4));
+      buffer_puts(buffer_1, ") is different from ip we actually use (");
+      buffer_put(buffer_1, strip, ip4_fmt(strip, iplocal));
+      buffer_puts(buffer_1, ")\n");
+      buffer_flush(buffer_1);
     }
 
   return r;
@@ -304,18 +307,18 @@ static int renew_entry()
   r = call_ddnsc(DDNS_T_RENEWENTRY);
   if(byte_diff(iplocal_old, 16, iplocal))
     {
-      buffer_puts(buffer_2, "ddns-clientd: warning: or ip changed from ");
-      buffer_put(buffer_2, strip, ip4_fmt(strip, iplocal_old));
-      buffer_puts(buffer_2, "to ");
+      buffer_puts(buffer_1, "ddns-clientd: warning: or ip changed from ");
+      buffer_put(buffer_1, strip, ip4_fmt(strip, iplocal_old));
+      buffer_puts(buffer_1, "to ");
       byte_copy(ip4, 4, iplocal);
-      buffer_put(buffer_2, strip, ip4_fmt(strip, iplocal));
-      buffer_puts(buffer_2, "\n");
-      buffer_flush(buffer_2);
+      buffer_put(buffer_1, strip, ip4_fmt(strip, iplocal));
+      buffer_puts(buffer_1, "\n");
+      buffer_flush(buffer_1);
 
       if(!flagleaveipalone)
 	{
-	  buffer_puts(buffer_2, "ddns-clientd: warning: killing old entry and setting new entry with new\n");
-	  buffer_flush(buffer_2);
+	  buffer_puts(buffer_1, "ddns-clientd: warning: killing old entry and setting new entry with new\n");
+	  buffer_flush(buffer_1);
 	  
 	  kill_entry();
 	  byte_copy(ip4, 4, iplocal);
@@ -550,7 +553,8 @@ int main(int argc, char *argv[])
     strerr_die2x(111, FATAL, "server port not set (try $DDNS_SERVER_PORT)");
   scan_ulong(serverport, &port);
   
-  /* check if the user requested any special action */ 
+  /* check if the user requested any special action
+     - this is a undocumented Feature */ 
   if(argc > 1 && argv[1][0] == '-')
     {
       if(argv[1][1] == 'R')  
