@@ -25,6 +25,6 @@ clean:
 	rm -f *.o *.a ddnsd ddnsd-data ddnsc
 
 distclean: clean
-	rm -f *~ 
+	rm -f *~ *.cdb
 	(cd djblib && make distclean)
 	(cd lib && make distclean)
