@@ -1,8 +1,11 @@
-/* $Id: filedns.c,v 1.4 2000/07/31 19:15:56 drt Exp $
+/* $Id: filedns.c,v 1.5 2000/11/21 19:50:41 drt Exp $
  *
  * dnsserver serving from the filesystem
  * 
  * $Log: filedns.c,v $
+ * Revision 1.5  2000/11/21 19:50:41  drt
+ * Updated E-Mailaddress, changed 'X' to '+' for illegal characters.
+ *
  * Revision 1.4  2000/07/31 19:15:56  drt
  * ddns-file(5) format changed
  * a lot of restructuring
@@ -39,7 +42,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: filedns.c,v 1.4 2000/07/31 19:15:56 drt Exp $";
+static char rcsid[] = "$Id: filedns.c,v 1.5 2000/11/21 19:50:41 drt Exp $";
 
 /* XXX: This is missing in DJBs headers, fefe should add it to libdjb (and strerr_warnXsys) */
 #define DNS_T_LOC "\0\35"
@@ -76,9 +79,10 @@ int query2filename(char *q, stralloc *s)
       stralloc_copy(&tmp, s);
       stralloc_copyb(s, "/", 1);
       stralloc_catb(s, p+1, (int) *p);
-      /* Clean up string by 'X'ing all characters not allowed in dnsnames.
-         We need to do tis to keep strange meta characters from slipping 
-	 into syscalls when opening files changing directorys */
+      /* Clean up string by changing all characters not allowed in
+	 dnsnames to '+'. We need to do tis to keep strange meta
+	 characters from slipping into syscalls when opening
+	 files changing directorys */
       for(i = 1; i < s->len; i++)
 	{
 	  if(!(((s->s[i] >= 'a') && (s->s[i] <= 'z'))
@@ -86,7 +90,7 @@ int query2filename(char *q, stralloc *s)
 	       || ((s->s[i] >= '0') && (s->s[i] <= '9'))
 	       || s->s[i] == '-'))
 	    {
-	      s->s[i] = 'X';
+	      s->s[i] = '+';
 	    }
 	} 
       stralloc_cat(s, &tmp);
@@ -216,7 +220,7 @@ int respond(char *q, char qtype[2])
   if (!response_addbytes("this is a response from an alpha quality dns-server", 51)) return 0;
   response_rfinish(RESPONSE_ADDITIONAL);
   if (!response_rstart(q, DNS_T_TXT, "\0\0\0\74")) return 0;
-  if (!response_addbytes("filednes 0.00 - if problems arise contact drt@ailis.de", 54)) return 0;
+  if (!response_addbytes("filednes 0.00 - if problems arise contact drt@un.bewaff.net", 54)) return 0;
   response_rfinish(RESPONSE_ADDITIONAL);
   
   //  if (flaga || flagptr) 
