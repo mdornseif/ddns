@@ -1,9 +1,12 @@
-/* $Id: ddns-ipfwo.linux.c,v 1.4 2000/08/10 07:39:03 drt Exp $
+/* $Id: ddns-ipfwo.linux.c,v 1.5 2000/08/11 06:41:55 drt Exp $
  *  -- drt@ailis.de
  *
  * Linux specific daemon for changing firewall rules on the fly
  *
  * $Log: ddns-ipfwo.linux.c,v $
+ * Revision 1.5  2000/08/11 06:41:55  drt
+ * Structure of firewallchains changed
+ *
  * Revision 1.4  2000/08/10 07:39:03  drt
  * IPs in firewall got mixed up
  *
@@ -48,7 +51,7 @@
 #include "ddns.h"
 //#include "libipfwc.h"
 
-static char rcsid[] = "$Id: ddns-ipfwo.linux.c,v 1.4 2000/08/10 07:39:03 drt Exp $";
+static char rcsid[] = "$Id: ddns-ipfwo.linux.c,v 1.5 2000/08/11 06:41:55 drt Exp $";
 
 #define ARGV0 "ddns-ipfwo: "
 #define FATAL "ddns-ipfwo: fatal: "
@@ -60,8 +63,6 @@ static int sock;
 
 /* uppercase in reference to k */
 static struct ip_fwchange SFWChange;
-static struct ip_fwnew SFWNew;
-
 
 void die_nomem(void)
 {
@@ -133,21 +134,14 @@ void doit()
 
 		  if(ch == 's')
 		    {
-		      byte_copy(&SFWNew.fwn_rule, sizeof(struct ip_fwuser), &SFWChange.fwc_rule);
-		      byte_zero(SFWNew.fwn_label, sizeof(SFWNew.fwn_label));
-		      str_copy(SFWNew.fwn_label, "ddns"); // chain to add to
-		      SFWNew.fwn_rulenum = 1;
-
-		      if(setsockopt(sock, IPPROTO_IP, IP_FW_INSERT, &SFWNew, sizeof(SFWNew)))
+  		      if(setsockopt(sock, IPPROTO_IP, IP_FW_APPEND, &SFWChange, sizeof(SFWChange)))
 			strerr_die2sys(111, FATAL, "can't insert rule: " ); 
 		    }
 		  else
 		    {
-
-		      buffer_putsflush(buffer_2, "DELETING\n");
-
 		      if(setsockopt(sock, IPPROTO_IP, IP_FW_DELETE, &SFWChange, sizeof(SFWChange)))
-			strerr_die2sys(111, ARGV0, "warning: can't delete rule: " );  
+			//	strerr_die2sys(111, ARGV0, "warning: can't delete rule: " );  
+			strerr_warn2(ARGV0, "warning: can't delete rule: ", &strerr_sys);
 		    }
 		}
 	    }
@@ -249,17 +243,6 @@ if(argc > 1 && argv[1][0] == '-' && argv[1][1] == 'V')
   SFWChange.fwc_rule.ipfw.fw_outputsize=0;
   str_copy(SFWChange.fwc_rule.ipfw.fw_vianame,"");
 
-  if(setsockopt(sock, IPPROTO_IP, IP_FW_CREATECHAIN, "ddns-ko\0\0", 9))
-    strerr_warn2(ARGV0, "warning: unable to create chain ddns-ko (will leave it alone): ", &strerr_sys);
-  else
-    {
-      str_copy(SFWChange.fwc_rule.label, "REJECT"); // target
-      str_copy(SFWChange.fwc_label, "ddns-ko"); // chain to add to
-      
-      if (setsockopt(sock, IPPROTO_IP, IP_FW_APPEND, &SFWChange, sizeof(SFWChange)))
-	strerr_die2sys(111, FATAL, "can't append default rule to chain ddns-ko: "); 
-    }
-
   if(setsockopt(sock, IPPROTO_IP, IP_FW_CREATECHAIN, "ddns-ok\0\0", 9))
     strerr_warn2(ARGV0, "warning: unable to create chain ddns-ok (will leave it alone): ", &strerr_sys);
   else
@@ -279,12 +262,6 @@ if(argc > 1 && argv[1][0] == '-' && argv[1][1] == 'V')
 	strerr_die2sys(111, FATAL, "couldn't flush chain ddns: "); 
     }
   
-  byte_copy(SFWChange.fwc_rule.label, sizeof(SFWChange.fwc_rule.label), "ddns-ko\0\0"); // target
-  byte_copy(SFWChange.fwc_label, sizeof(SFWChange.fwc_label), "ddns\0\0\0\0\0"); // chain to add to
-  
-  if(setsockopt(sock, IPPROTO_IP, IP_FW_APPEND, &SFWChange, sizeof(SFWChange)))
-    strerr_die2sys(111, FATAL, "can't append default rule to chain ddns: " ); 
-
   doit();
 
   return 1;
