@@ -4,12 +4,16 @@ CFLAGS=-g -Wall -Idnscache -Ilibtai
 
 defaut: client daemon
 
-daemon: libs ddnsd ddnsd-data filedns
+daemon: libs ddnsd ddnsd-data ddns-cleand filedns
 
 client: libs ddnsc
 
 ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o rijndael.o mt19937.o dnscache.a libtai.a 
 	gcc -o $@ $^
+
+ddns-cleand: ddns-cleand.o scan_xlong.o \
+sig_alarm.o sig_block.o sig_catch.o now.o dnscache.a libtai.a 
+	gcc -o $@ ddns-cleand.o scan_xlong.o sig_alarm.o sig_block.o sig_catch.o now.o dnscache.a libtai.a 
 
 ddnsc: ddnsc.o fmt_xint.o fmt_xlong.o rijndael.o mt19937.o dnscache.a libtai.a 
 	gcc -o $@ $^
@@ -19,6 +23,22 @@ ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libta
 
 filedns: filedns.o server.o dnscache.a libtai.a
 	gcc -o $@ $^
+
+sig_block.o: sig_block.c hassgprm.h
+
+sig_catch.o: sig_catch.c hassgact.h
+
+hassgprm.h: dnscache.a
+	make trysgprm
+	./dnscache/choose cl trysgprm hassgprm.h1 hassgprm.h2 > hassgprm.h
+
+hassgact.h: dnscache.a
+	make trysgact
+	./dnscache/choose cl trysgact hassgact.h1 hassgact.h2 > hassgact.h
+
+trysgprm: trysgprm.o
+
+trysgact: trysgact.o
 
 libs: dnscache.a libtai.a
 
@@ -45,8 +65,8 @@ libtai.a:
 	ar cr ../libtai.a *.o; 	
 
 clean:
-	rm -f *.o *.a ddnsd ddnsd-data ddnsc filedns
+	rm -f *.o ddnsd ddnsd-data ddnsc filedns hassgprm.h hassgact.h
 
 distclean: clean
-	rm -f *~ *.cdb
+	rm -f *~ *.cdb core
 	rm -Rf dnscache libtai
