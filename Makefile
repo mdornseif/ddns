@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.21 2000/07/29 21:42:56 drt Exp $
+# $Id: Makefile,v 1.22 2000/07/31 19:08:15 drt Exp $
 #  --drt@ailis.de
 
 DOWNLOADER = "wget"
@@ -10,7 +10,7 @@ defaut: client
 
 all: client daemon
 
-daemon: libs ddnsd ddnsd-data ddnsd-conf ddns-cleand ddns-cleand-conf filedns filedns-conf ddnsd-aclwriter ddnsd-aclwriter-conf
+daemon: libs ddnsd ddnsd-data ddnsd-conf ddns-cleand ddns-cleand-conf filedns filedns-conf ddns-snapd ddns-snapd-conf ddns-ipfwo.linux ddns-ipfwo-conf
 
 client: libs ddns-clientd
 
@@ -18,11 +18,11 @@ ddns-clientd: ddns.h ddns-clientd.o ddnsc.o ddns_pack.o dnscache.a libtai.a \
 drtlib.a djblib.a dnscache/ndelay_off.o
 	gcc -o $@ ddns-clientd.o ddnsc.o ddns_pack.o dnscache.a libtai.a drtlib.a djblib.a dnscache/ndelay_off.o
 
-ddnsd: ddns.h ddnsd.o ddns_pack.o libtai.a djblib.a drtlib.a dnscache.a
-	gcc -o $@ ddnsd.o ddns_pack.o libtai.a djblib.a drtlib.a dnscache.a
+ddnsd: ddns.h ddnsd.h ddnsd.o ddnsd_setentry.o ddnsd_renewentry.o ddnsd_killentry.o ddns_pack.o ddnsd_net.o ddnsd_log.o drtlib.a libtai.a djblib.a dnscache.a
+	gcc -o $@ ddnsd.o ddnsd_setentry.o ddnsd_renewentry.o ddnsd_killentry.o ddns_pack.o ddnsd_net.o ddnsd_log.o drtlib.a libtai.a djblib.a dnscache.a
 
 ddnsd-conf: ddnsd-conf.o
-	$(CC) $(CFLAGS) -o ddnsd-conf ddnsd-conf.o dnscache.a
+	$(CC) $(CFLAGS) -o $@ ddnsd-conf.o dnscache.a
 
 ddnsd-data: ddnsd-data.o drtlib.a djblib.a dnscache.a libtai.a
 	gcc -o $@ ddnsd-data.o drtlib.a djblib.a dnscache.a libtai.a
@@ -31,7 +31,7 @@ ddns-cleand: ddns.h ddns-cleand.o libtai.a djblib.a drtlib.a dnscache.a
 	gcc -o $@ ddns-cleand.o  libtai.a djblib.a drtlib.a dnscache.a 
 
 ddns-cleand-conf: ddns-cleand-conf.o
-	$(CC) $(CFLAGS) -o ddns-cleand-conf ddns-cleand-conf.o dnscache.a
+	$(CC) $(CFLAGS) -o $@ ddns-cleand-conf.o dnscache.a
 
 filedns: ddns.h filedns.o ddns_parseline.o server.o response.o qlog.o dd.o \
 drtlib.a dnscache.a libtai.a djblib.a 
@@ -39,13 +39,19 @@ drtlib.a dnscache.a libtai.a djblib.a
         drtlib.a dnscache.a libtai.a djblib.a 
 
 filedns-conf: filedns-conf.o  dnscache.a
-	$(CC) $(CFLAGS) -o filedns-conf filedns-conf.o dnscache.a
+	$(CC) $(CFLAGS) -o $@ filedns-conf.o dnscache.a
 
-ddnsd-aclwriter: ddns.h ddnsd-aclwriter.o dAVLTree.o ddns_parseline.o drtlib.a libtai.a djblib.a drtlib.a dnscache.a
-	gcc -o $@ ddnsd-aclwriter.o dAVLTree.o ddns_parseline.o drtlib.a libtai.a djblib.a dnscache.a
+ddns-snapd: ddns.h ddns-snapd.o ddns_snapdump.o dAVLTree.o ddns_parseline.o write_fifodir.o drtlib.a libtai.a djblib.a drtlib.a dnscache.a
+	gcc -o $@ ddns-snapd.o ddns_snapdump.o dAVLTree.o ddns_parseline.o write_fifodir.o drtlib.a libtai.a djblib.a dnscache.a
 
-ddnsd-aclwriter-conf: ddnsd-aclwriter-conf.o
-	$(CC) $(CFLAGS) -o ddnsd-aclwriter-conf ddnsd-aclwriter-conf.o dnscache.a
+ddns-snapd-conf: ddns-snapd-conf.o
+	$(CC) $(CFLAGS) -o $@ ddns-snapd-conf.o dnscache.a
+
+ddns-ipfwo.linux: ddns-ipfwo.linux.o ddns_parseline.o drtlib.a libtai.a djblib.a drtlib.a dnscache.a
+	$(CC) $(CFLAGS) -o $@ ddns-ipfwo.linux.o ddns_parseline.o drtlib.a libtai.a djblib.a drtlib.a dnscache.a
+
+ddns-ipfwo-conf: ddns-ipfwo-conf.o
+	$(CC) $(CFLAGS) -o $@ ddns-ipfwo-conf.o dnscache.a
 
 sig_block.o: sig_block.c hassgprm.h
 
@@ -112,8 +118,8 @@ open_write.o
 	sig_catch.o timeoutconn.o sig.o sig_int.o sig_term.o socket_delay.o \
 	socket_local.o fifo.o coe.o open_write.o
 
-drtlib.a: iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o fieldsep.o stralloc_cleanlineend.o traversedirhier.o
-	ar cr drtlib.a iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o fieldsep.o stralloc_cleanlineend.o traversedirhier.o
+drtlib.a: iso2txt.o loc.o loc_pack.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o fieldsep.o stralloc_cleanlineend.o traversedirhier.o stralloc_free.o write_fifodir.o str_copy.o
+	ar cr drtlib.a iso2txt.o loc.o loc_pack.o mt19937.o pad.o rijndael.o txtparse.o droprootordie.o fieldsep.o stralloc_cleanlineend.o traversedirhier.o stralloc_free.o write_fifodir.o str_copy.o
 
 setup-all: setup-client setup-server
 
@@ -136,13 +142,18 @@ setup-server: daemon
 	install -cD ddns-cleand.8 /usr/local/man/man8/ddns-cleand.8
 	install -Ds ddns-cleand-conf /usr/local/bin/ddns-cleand-conf
 	install -cD ddns-cleand-conf.8 /usr/local/man/man8/ddns-cleand-conf.8
-	install -Ds ddnsd-aclwriter /usr/local/bin/ddnsd-aclwriter
-	install -cD ddnsd-aclwriter.8 /usr/local/man/man8/ddnsd-aclwriter.8
-	install -Ds ddnsd-aclwriter-conf /usr/local/bin/ddnsd-aclwriter-conf
-	install -cD ddnsd-aclwriter-conf.8 /usr/local/man/man8/ddnsd-aclwriter-conf.8
+	install -Ds ddns-snapd /usr/local/bin/ddns-snapd
+#	install -cD ddns-snapd.8 /usr/local/man/man8/ddnsd-snapd.8
+	install -Ds ddns-snapd-conf /usr/local/bin/ddns-snapd-conf
+#	install -cD ddns-snapd-conf.8 /usr/local/man/man8/ddnsd-snapd-conf.8
+	install -Ds ddns-ipfwo.linux /usr/local/bin/ddns-ipfwo.linux
+#	install -cD ddns-ipfwo.8 /usr/local/man/man8/ddnsd-ipfwo.8
+	install -Ds ddns-ipfwo-conf /usr/local/bin/ddns-ipfwo-conf
+#	install -cD ddns-ipfwo-conf.8 /usr/local/man/man8/ddnsd-ipfwo-conf.8
 
 clean:
-	rm -f *.o ddnsd dnsd-conf ddnsd-data ddnsd-data-conf filedns filedns-conf ddns-cleand ddns-cleand-conf ddns-clientd ddnsd-aclwriter \
+	rm -f *.o ddnsd dnsd-conf ddnsd-data ddnsd-data-conf filedns filedns-conf \
+ddns-cleand ddns-cleand-conf ddns-clientd ddnsd-snapd ddns-snapd-conf ddns-ipfwo.linux \
 hassgprm.h hassgact.h hasmkffo.h *.a
 
 distclean: clean

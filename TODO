@@ -2,10 +2,9 @@ ERRORS
 * create html-pages
 * stat(2) seems to be completly freaked out on my LinuxPPC, find out why.
 * limits
-* ddnsd-aclwriter-conf.8
-* ddnsd-aclwriter.8
-* empty lines in fifo
-* tcprules
+* ddns-pipe.5
+* ddns-snapd-conf.8
+* ddns-snapd.8
 
 CLEANUPS
 * README
@@ -23,10 +22,12 @@ CLEANUPS
 * filedns, ddns-cleand, ddns-clientd, ddnsd-cdbwrite: check for memory leaks
 * filedns.8: document X
 * ddnsd: loc handling
+* ddnsd: log pid
+* filedns, ddns-clientd and ddns-snapd are to long
+* loc_scan(), loc_fmt()
 
 FEATURES
 * ddns-cdbout
-* ddnsd-aclwriter should create directly a cdb
 * ddnsd, ddns-cleand: a way to lock entrys (sticky bit?)
 * use libdjb
 * filedns: SOA handling
@@ -36,12 +37,13 @@ FEATURES
 * ddns-clientd: support for round-robbin dns / multiple adresses of the server ip 
 * ddns-clientd, ddnsd, filedns: support for ipv6 as a transport
 * ddns-bindupo
-* ddns-ipfwo
+* ddns-ipfwo: dead whole database at startup
 * ddns-ipchaino
 * ddns-slaveo 
 * ddns-bindout
 * ddns-tinout
 * ddns-dxfsout
+* random()
 
 BLUE SKY
 * UDP as a transport
