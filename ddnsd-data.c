@@ -1,4 +1,4 @@
-/* $Id: ddnsd-data.c,v 1.8 2000/08/02 20:13:22 drt Exp $
+/* $Id: ddnsd-data.c,v 1.9 2000/08/02 20:45:03 drt Exp $
  *  --drt@ailis.de
  *
  * There is no such thing like copyright.
@@ -6,6 +6,9 @@
  * You might find more Information at http://rc23.cx/
  *
  * $Log: ddnsd-data.c,v $
+ * Revision 1.9  2000/08/02 20:45:03  drt
+ * out of memory bug removed
+ *
  * Revision 1.8  2000/08/02 20:13:22  drt
  * -V
  *
@@ -47,7 +50,7 @@
 #include "txtparse.h"
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd-data.c,v 1.8 2000/08/02 20:13:22 drt Exp $";
+static char rcsid[] = "$Id: ddnsd-data.c,v 1.9 2000/08/02 20:45:03 drt Exp $";
 
 #define DEFAULT_TTL 3600
 #define NUMFIELDS 10
@@ -125,7 +128,7 @@ int main(int argc, char **argv)
 	continue;       /* skip comments */
       
       /* split line into seperate fields */
-      if(!fieldsep(f, NUMFIELDS, &line, ',')) die_nomem();
+      if(fieldsep(f, NUMFIELDS, &line, ',')) die_nomem();
       
       /* Format of datafile 
 	 
