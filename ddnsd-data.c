@@ -1,9 +1,16 @@
-/* $Id: ddnsd-data.c,v 1.4 2000/05/01 11:47:18 drt Exp $
+/* $Id: ddnsd-data.c,v 1.5 2000/05/02 19:37:04 drt Exp $
  *  --drt@ailis.de
+ *
+ * There is no such thing like copyright.
  * 
  * $Log: ddnsd-data.c,v $
+ * Revision 1.5  2000/05/02 19:37:04  drt
+ * Handling of error conditions
+ * switched to 256 bit keys
+ * code cleanups
+ *
  * Revision 1.4  2000/05/01 11:47:18  drt
- * ttl/leasetime coms now from data.cdb
+ * ttl/leasetime comes now from data.cdb
  *
  */
 
@@ -29,7 +36,7 @@
 #include "pad.h"
 #include "txtparse.h"
 
-static char rcsid[] = "$Id: ddnsd-data.c,v 1.4 2000/05/01 11:47:18 drt Exp $";
+static char rcsid[] = "$Id: ddnsd-data.c,v 1.5 2000/05/02 19:37:04 drt Exp $";
 
 #define DEFAULT_TTL 3600
 #define NUMFIELDS 10
@@ -45,7 +52,7 @@ void die_datatmp(void)
 
 void nomem(void)
 {
-  strerr_die1sys(111, FATAL);
+  strerr_die2sys(111, FATAL, "help - no memory ");
 }
 
 void syntaxerror(char *why)
@@ -76,34 +83,33 @@ int main()
   buffer_init(&b,read,0 ,bspace,sizeof bspace);
 
   fdcdb = open_trunc("data.tmp");
-  if (fdcdb == -1)
-    {
-      die_datatmp();
-    }
-  
-  if (cdb_make_start(&cdb,fdcdb) == -1) 
-    {
-      die_datatmp();
-    }
+  if (fdcdb == -1) 
+    die_datatmp();
 
+  if (cdb_make_start(&cdb,fdcdb) == -1) 
+    die_datatmp();
+ 
   while (match) 
     {
       ++linenum;
-      if (getln(buffer_0, &line, &match, '\n') == -1)
-	{
-	  strerr_die2sys(111, FATAL, "unable to read line: ");
-	}
       
+      /* read one line from stdin */
+      if (getln(buffer_0, &line, &match, '\n') == -1)
+	  strerr_die2sys(111, FATAL, "unable to read line: ");
+      
+      /* remove cruft from line */
       while (line.len) 
 	{
 	  ch = line.s[line.len - 1];
 	  if ((ch != ' ') && (ch != '\t') && (ch != '\n')) break;
 	  --line.len;
 	}
-      if (!line.len) continue;
-
-      /* skip comments */
-      if (line.s[0] == '#') continue;
+      
+      if (!line.len) 
+	continue;               /* skip empty lines */
+      
+      if (line.s[0] == '#')  
+	continue;       /* skip comments */
       
       /* split line into seperate fields */
       j = 0;
@@ -121,64 +127,81 @@ int main()
 	    }
 	}
       
-      /* example:
+      /* Format of datafile 
+	 
 	 uid:uname        :key   :ttl                
 	 123:joecypherpunk:geheim:3600
+	 
+	 
+	 Format of cdb:
+	 
+	 database key: 4 byte uint32 in network byte order -> uid
+	 data:         32 byte rijndael passprase/key
+	 4 byte uint32 in network byte order -> ttl
+	 x byte username
+	 
+	      0123456789abcdf0123456789abcdef012345678 ...
+	 uid  passphrase                     ttl uname ...
       */
       
       stralloc_copys(&key, "");
       stralloc_copys(&data, "");
-
-      /* XXX: error handling is missing */
+      
       scan_ulong(f[0].s, &uid); 
       
+      /* parse/pad passphrase */
       if(f[2].len > 0)
 	{
 	  txtparse(&f[2]);
-	  pad(&f[2], 16);
+	  pad(&f[2], 32);
 	}
       else
-	{
-	  syntaxerror("no shared secret");	  
-	}
-
-      if(f[3].len > 0)
-	{
-	  scan_ulong(f[3].s, &ttl); 
-	}
-      else
-	{
-	  ttl = DEFAULT_TTL;
-	}
-
-      if(uid == 0) 
-	{
-	  syntaxerror("uid 0 not allowed");
-	}
+	syntaxerror("no shared secret");
       
-      stralloc_ready(&key, sizeof(uint32));
+      if(f[3].len > 0)
+	scan_ulong(f[3].s, &ttl);
+      else
+	ttl = DEFAULT_TTL;
+      
+      if(uid == 0)
+	syntaxerror("uid 0 not allowed");
+      
+      if(!stralloc_ready(&key, sizeof(uint32))) 
+	nomem();
+      
       uint32_pack(key.s, uid);
       key.len = 4;
       
-      stralloc_copy(&data, &f[2]);
-      stralloc_readyplus(&data, 4);
+      /* copy 32 bytes / 256 bits of key */
+      if(!stralloc_copy(&data, &f[2])) 
+	nomem();
+      
+      /* 4 bytes ttl */
+      if(!stralloc_readyplus(&data, 4)) 
+	nomem();
+
       uint32_pack(&data.s[data.len], ttl);
       data.len += 4;
-      stralloc_cat(&data, &f[1]);
+      
+      /* copy username */
+      if(!stralloc_cat(&data, &f[1])) 
+	nomem();
 
       if (cdb_make_add(&cdb, key.s, key.len, data.s, data.len) == -1)
-	{
-	  die_datatmp();
-	}
+	die_datatmp();
     }
   
-  if (cdb_make_finish(&cdb) == -1) die_datatmp();
-  if (fsync(fdcdb) == -1) die_datatmp();
-  if (close(fdcdb) == -1) die_datatmp(); /* NFS stupidity */
+  if (cdb_make_finish(&cdb) == -1) 
+    die_datatmp();
+  
+  if (fsync(fdcdb) == -1) 
+    die_datatmp();
+  
+  if (close(fdcdb) == -1) 
+    die_datatmp(); /* NFS stupidity */
+
   if (rename("data.tmp", "data.cdb") == -1)
-    {
-      strerr_die2sys(111, FATAL, "unable to move data.tmp to data.cdb: ");
-    }
-  
+    strerr_die2sys(111, FATAL, "unable to move data.tmp to data.cdb: ");
+
   return 0;
 }
