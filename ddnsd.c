@@ -1,8 +1,13 @@
-/* $Id: ddnsd.c,v 1.16 2000/07/14 14:49:37 drt Exp $
+/* $Id: ddnsd.c,v 1.17 2000/07/14 15:32:51 drt Exp $
  *
  * server for ddns - this file is to long
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.17  2000/07/14 15:32:51  drt
+ * The timestamp is checked now in ddnsd and an error
+ * is returned if there is more than 4000s fuzz.
+ * This needs further checking.
+ *
  * Revision 1.16  2000/07/14 14:49:37  drt
  * ddnsd ignires IP-adresses which are set to 0
  *
@@ -96,7 +101,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.16 2000/07/14 14:49:37 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.17 2000/07/14 15:32:51 drt Exp $";
 
 static char *datadir;
 
@@ -306,6 +311,8 @@ int ddnsd_recive(struct ddnsrequest *p)
   int r;
   char *key;
   struct ddnsrequest ptmp;
+  struct taia now;
+  struct taia deadline;
   stralloc data = {0};
   
   /* read using a 120 second timeout */
@@ -320,7 +327,7 @@ int ddnsd_recive(struct ddnsrequest *p)
   if(ddnsd_find_user(p->uid, &data))
     {
       key = data.s;
-      // default TTL and username from cdb
+      // TTL and username from cdb
       uint32_unpack(&data.s[32], &ttl);
       if(!stralloc_copyb(&username, &data.s[36], data.len-36)) nomem();
       
@@ -353,8 +360,22 @@ int ddnsd_recive(struct ddnsrequest *p)
       /* check for random1 and random2 beeing equal */
       if(p->random1 != p->random2)
 	/* propably decryption didn't suceed */
-	ddnsd_send_err(p->uid, DDNS_T_ECANTDECRYPT, "alert: someone tampered with the request");
+ 	ddnsd_send_err(p->uid, DDNS_T_ECANTDECRYPT, "alert: someone tampered with the request");
       
+      /* check for timestamp beeing sane */
+      /* we use a huge window of legal timestams here
+         because clients clocks are screwed up to often */
+      taia_now(&now);
+      taia_uint(&deadline, 4000);
+      taia_sub(&deadline, &now, &deadline);     
+      if (taia_less(&p->timestamp, &deadline))
+	ddnsd_send_err(p->uid, DDNS_T_ETIMESWRONG, "warning: timestamp wrong (to old)");
+      taia_uint(&deadline, 4000);
+      taia_add(&deadline, &now, &deadline);     
+      if (taia_less(&deadline, &p->timestamp))
+	ddnsd_send_err(p->uid, DDNS_T_ETIMESWRONG, "warning: timestamp wrong (to new)");
+      // XXX: this needs checking
+
       /* everything is fine */
       return p->type;
     }
@@ -644,7 +665,7 @@ int main(int argc, char **argv)
       break;
     default:
       dump_packet(&p, "unsupported type/command");
-      ddnsd_send_err(p.uid, DDNS_T_EUNSUPPTYPE, "unsupported type/command");
+      ddnsd_send_err(p.uid, DDNS_T_EPROTERROR, "unsupported type/command");
     }
   
   return 0;

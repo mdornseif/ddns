@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.6 2000/07/14 14:07:51 drt Exp $
+/* $Id: ddns-clientd.c,v 1.7 2000/07/14 15:32:51 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
@@ -6,6 +6,11 @@
  * (K)opyright is Myth
  * 
  * $Log: ddns-clientd.c,v $
+ * Revision 1.7  2000/07/14 15:32:51  drt
+ * The timestamp is checked now in ddnsd and an error
+ * is returned if there is more than 4000s fuzz.
+ * This needs further checking.
+ *
  * Revision 1.6  2000/07/14 14:07:51  drt
  * ddns-clientd now handles changes of ttl by
  * the server and logs ttl.
@@ -59,7 +64,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.6 2000/07/14 14:07:51 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.7 2000/07/14 15:32:51 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 
@@ -132,8 +137,8 @@ void log_retuncode(int r)
     case DDNS_T_ENOENTRYUSED:
 	buffer_puts(buffer_1, "ENE: client requsted to renew/kill something which is not set\n");
 	break;
-    case DDNS_T_EUNSUPPTYPE: 
-      buffer_puts(buffer_1, "EUS: \n"); 
+    case DDNS_T_ETIMESWRONG: 
+      buffer_puts(buffer_1, "ETW: timestamp is wrong. Check your local clock!\n"); 
       break;  
     default:
       strerr_die1x(100, "unknown packet");

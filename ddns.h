@@ -1,6 +1,11 @@
-/* $Id: ddns.h,v 1.7 2000/07/07 13:32:47 drt Exp $
+/* $Id: ddns.h,v 1.8 2000/07/14 15:32:51 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.8  2000/07/14 15:32:51  drt
+ * The timestamp is checked now in ddnsd and an error
+ * is returned if there is more than 4000s fuzz.
+ * This needs further checking.
+ *
  * Revision 1.7  2000/07/07 13:32:47  drt
  * ddnsd and ddnsc now basically work as they should and are in
  * a usable state. The protocol is changed a little bit to lessen
@@ -48,8 +53,8 @@
 #define DDNS_T_ESERVINT        6  /* internal server error */
 #define DDNS_T_EPROTERROR      7  /* generic protocol error */
 #define DDNS_T_EWRONGMAGIC     8  /* wrong magic token */
-#define DDNS_T_ECANTDECRYPT    9  /* can't decrypt packet */
-#define DDNS_T_EUNSUPPTYPE   0xa  /* unknown or unsupported type in this situation */
+#define DDNS_T_ECANTDECRYPT    9  /* error while decrypting */
+#define DDNS_T_ETIMESWRONG   0xa  /* timestamp in packet is considered to old or in the future */
 #define DDNS_T_EUNKNOWNUID   0xb  /* client sent unknown uid */
 #define DDNS_T_EALLREADYUSED 0xc  /* client requsted to set something which is already set */
 #define DDNS_T_ENOENTRYUSED  0xd  /* client requsted to renew/kill something which is not set */

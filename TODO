@@ -1,5 +1,4 @@
 * check usage of bufered I/O
-* ddnsd: check timestamps 
 * retry connection to server in client
 * automatic ip-determination/checking in ddns-clientd
 * defaults in ddns-clientd
