@@ -1,9 +1,14 @@
-/* $Id: ddnsd-data.c,v 1.6 2000/07/17 13:45:56 drt Exp $
+/* $Id: ddnsd-data.c,v 1.7 2000/07/29 21:28:32 drt Exp $
  *  --drt@ailis.de
  *
  * There is no such thing like copyright.
  * 
+ * You might find more Information at http://rc23.cx/
+ *
  * $Log: ddnsd-data.c,v $
+ * Revision 1.7  2000/07/29 21:28:32  drt
+ * renamed nomem() to die_nomem(), use fieldsep()
+ *
  * Revision 1.6  2000/07/17 13:45:56  drt
  * Dokumentation upgrades
  *
@@ -14,7 +19,6 @@
  *
  * Revision 1.4  2000/05/01 11:47:18  drt
  * ttl/leasetime comes now from data.cdb
- *
  */
 
 #include <sys/stat.h>  /* umask */
@@ -36,10 +40,11 @@
 #include "uint16.h"
 #include "uint32.h"
 
+#include "fieldsep.h"
 #include "pad.h"
 #include "txtparse.h"
 
-static char rcsid[] = "$Id: ddnsd-data.c,v 1.6 2000/07/17 13:45:56 drt Exp $";
+static char rcsid[] = "$Id: ddnsd-data.c,v 1.7 2000/07/29 21:28:32 drt Exp $";
 
 #define DEFAULT_TTL 3600
 #define NUMFIELDS 10
@@ -53,7 +58,7 @@ void die_datatmp(void)
   strerr_die2sys(111, FATAL, "unable to create data.tmp: ");
 }
 
-void nomem(void)
+void die_nomem(void)
 {
   strerr_die2sys(111, FATAL, "help - no memory ");
 }
@@ -67,7 +72,6 @@ void syntaxerror(char *why)
 
 int main()
 {
-  int i, j, k;
   int fdcdb;
   int match = 1;
   uint32 uid = 0;
@@ -115,20 +119,7 @@ int main()
 	continue;       /* skip comments */
       
       /* split line into seperate fields */
-      j = 0;
-      for (i = 0;i < NUMFIELDS;++i) 
-	{
-	  if (j >= line.len) 
-	    {
-	      if (!stralloc_copys(&f[i],"")) nomem();
-	    }
-	  else 
-	    {
-	      k = byte_chr(line.s + j, line.len - j, ',');
-	      if (!stralloc_copyb(&f[i], line.s + j, k)) nomem();
-	      j += k + 1;
-	    }
-	}
+      if(!fieldsep(f, NUMFIELDS, &line, ',')) die_nomem();
       
       /* Format of datafile 
 	 
@@ -170,25 +161,25 @@ int main()
 	syntaxerror("uid 0 not allowed");
       
       if(!stralloc_ready(&key, sizeof(uint32))) 
-	nomem();
+	die_nomem();
       
       uint32_pack(key.s, uid);
       key.len = 4;
       
       /* copy 32 bytes / 256 bits of key */
       if(!stralloc_copy(&data, &f[2])) 
-	nomem();
+	die_nomem();
       
       /* 4 bytes ttl */
       if(!stralloc_readyplus(&data, 4)) 
-	nomem();
+	die_nomem();
 
       uint32_pack(&data.s[data.len], ttl);
       data.len += 4;
       
       /* copy username */
       if(!stralloc_cat(&data, &f[1])) 
-	nomem();
+	die_nomem();
 
       if (cdb_make_add(&cdb, key.s, key.len, data.s, data.len) == -1)
 	die_datatmp();
