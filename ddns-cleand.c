@@ -1,9 +1,17 @@
-/* $Id: ddns-cleand.c,v 1.2 2000/05/02 08:03:14 drt Exp $
+/* $Id: ddns-cleand.c,v 1.3 2000/07/12 11:44:42 drt Exp $
  *  --drt@ailis.de
  *
- * queue cleaning daemon for ddns
+ * cleaning daemon for ddns
  * 
+ * cleand cleans entrys in the dnstree which are expired,
+ * in addition it cleans stale entrys in tmp 
+ * it later might check is clients are up by pinging them
+ *
  * $Log: ddns-cleand.c,v $
+ * Revision 1.3  2000/07/12 11:44:42  drt
+ * cleaning of tmp, usage on `,' instead of `:'
+ * as a seperator to avoid IPv6 problems.
+ *
  * Revision 1.2  2000/05/02 08:03:14  drt
  * dropping root, deleting empty files,
  * code cleanups
@@ -22,6 +30,7 @@
 #include "byte.h"
 #include "cdb.h"
 #include "droproot.h"
+#include "env.h"
 #include "error.h"
 #include "fmt.h"
 #include "getln.h"
@@ -35,14 +44,17 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.2 2000/05/02 08:03:14 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.3 2000/07/12 11:44:42 drt Exp $";
 
 /* maximum number of fields in a line */
 #define NUMFIELDS 10
 
-static char datadir[] = "dnsdata";
 static uint32 linenum = 0;
+static int interval = 256;
 struct cdb c;
+static stralloc tmpname = {0};
+stralloc data = { 0 };
+stralloc line = { 0 };
 
 void nomem(void)
 {
@@ -64,6 +76,40 @@ void syntaxerror(char *file, char *why)
   buffer_flush(buffer_2);
 }
 
+/* clean cruft from tmp */
+/* cruft is defined as files older than 1.5 days */
+/* tis is inspired by Maildir handling */
+void tmpdir_clean()
+{
+ DIR *dir;
+ struct dirent *d;
+ struct stat st;
+ datetime_sec time;
+
+ time = now();
+
+ dir = opendir("tmp");
+ if (!dir) return;
+
+ while (d = readdir(dir))
+  {
+   if (d->d_name[0] == '.') continue;
+   if (!stralloc_copys(&tmpname,"tmp/")) break;
+   if (!stralloc_cats(&tmpname,d->d_name)) break;
+   if (!stralloc_0(&tmpname)) break;
+   if (stat(tmpname.s,&st) == 0)
+     if (time > st.st_atime + 129600)
+       {
+	 unlink(tmpname.s);
+	 buffer_puts(buffer_2, "cleaned stale tmpfile ");
+	 buffer_puts(buffer_2, tmpname.s);
+	 buffer_puts(buffer_2, "\n");
+	 buffer_flush(buffer_2);
+       }
+  }
+ closedir(dir);
+}
+
 int dofile(char *file, time_t ctime)
 {
   char bspace[1024];
@@ -76,8 +122,6 @@ int dofile(char *file, time_t ctime)
   uint32 ttl = 17;
   uint32 uid = 0;
   buffer b;
-  stralloc data = { 0 };
-  stralloc line = { 0 };
   stralloc f[NUMFIELDS] = {{0}};
 
   fd = open_read(file);
@@ -135,7 +179,7 @@ int dofile(char *file, time_t ctime)
 	    }
 	  else 
 	    {
-	      k = byte_chr(line.s + j,line.len - j,':');
+	      k = byte_chr(line.s + j,line.len - j,',');
 	      if (!stralloc_copyb(&f[i],line.s + j,k)) 
 		{
 		  nomem();
@@ -146,7 +190,7 @@ int dofile(char *file, time_t ctime)
 
       if(line.s[0] == '=')
 	{	 
-	  scan_xlong(f[1].s, &uid); 
+	  scan_xlong(&f[2].s[2], &uid); 
 
 	  if(uid == 0)
 	    {
@@ -264,13 +308,18 @@ int dodir(char *dirname)
 
 int flagrunasap = 0; void sigalrm() { flagrunasap = 1; }
 
-int main()
+int main(int argc, char *argv[])
 {
   int fd;
+  char *x;
 
   /* chroot() to $ROOT and switch to $UID:$GID */
   droproot("ddns-cleand: ");
 
+  if (!argv[1]) 
+    strerr_die1x(100, "fatal: usage: ddns-cleand dnsdir");
+
+  /* SIGALRM can be used to force cleaning now */
   sig_alarmcatch(sigalrm);
   
   for (;;)
@@ -279,26 +328,30 @@ int main()
 
       fd = open_read("data.cdb");
       if (fd == -1) 
-	{
 	  strerr_die1sys(111, "can't open data.cdb");
-	}
       
       cdb_init(&c, fd);
       
       /* traverse the tree */
-      dodir(datadir);
+      dodir(argv[1]);
       
       cdb_free(&c);
       close(fd);
+
+      /* clean up tmp */
+      x = env_get("DDNSDONTCLEANTMP");
+      if (!x)
+	tmpdir_clean();
       
-      sleep(256);
+      sleep(interval);
+
+      /* check for SIGALRM */
       if(flagrunasap == 1)
 	{
 	  flagrunasap = 0;
 	  
 	  buffer_puts(buffer_2, "recived SIGALRM starting to clean\n");
 	  buffer_flush(buffer_2);
-	  
 	}
     }
 
