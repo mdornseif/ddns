@@ -1,9 +1,12 @@
-/* $Id: ddnsd_killentry.c,v 1.2 2000/08/09 15:43:30 drt Exp $
+/* $Id: ddnsd_killentry.c,v 1.3 2000/10/17 21:59:35 drt Exp $
  *  -- drt@ailis.de - http://rc23.cx/
  *
  * (K)allisti 2000 a.D. - all rights reversed
  *
  * $Log: ddnsd_killentry.c,v $
+ * Revision 1.3  2000/10/17 21:59:35  drt
+ * *** empty log message ***
+ *
  * Revision 1.2  2000/08/09 15:43:30  drt
  * ipfwo.linux is now shomehow mature
  *
@@ -24,7 +27,7 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd_killentry.c,v 1.2 2000/08/09 15:43:30 drt Exp $";
+static char rcsid[] = "$Id: ddnsd_killentry.c,v 1.3 2000/10/17 21:59:35 drt Exp $";
 
 
 /* the user requested to delete his entry from the dns */
@@ -55,10 +58,10 @@ void ddnsd_killentry( struct ddnsrequest *p, uint32 *ttl, stralloc *username)
   while(match) 
     {
       if(getln(&b, &line, &match, '\n') == -1)
-	{
-	  strerr_warn1("unable to read line: ", &strerr_sys);
-	  break;
-	}
+		{
+		  strerr_warn1("unable to read line: ", &strerr_sys);
+		  break;
+		}
       
       /* clean up line end */
       stralloc_cleanlineend(&line); 
@@ -68,16 +71,15 @@ void ddnsd_killentry( struct ddnsrequest *p, uint32 *ttl, stralloc *username)
       if(line.s[0] == 0) continue;
       if(line.s[0] == 's') break;
     }
-
+  
   if(unlink(tmpname.s) == -1)
     {
       if(errno == error_noent)
-	// File not found
-	ddnsd_send_err(p->uid, DDNS_T_ENOENTRYUSED, "entry can't be killed");
+		// File not found
+		ddnsd_send_err(p->uid, DDNS_T_ENOENTRYUSED, "entry can't be killed");
       else
-	ddnsd_send_err_sys(p->uid, tmpname.s);
+		ddnsd_send_err_sys(p->uid, tmpname.s);
     }
-  
   ddnsd_log(p->uid, "killing entry\n");
   
   /* construct the answer Packet */
@@ -85,7 +87,7 @@ void ddnsd_killentry( struct ddnsrequest *p, uint32 *ttl, stralloc *username)
   r.uid = p->uid;
   r.leasetime = 0;
   ddnsd_send(&r);  
- 
+  
   /* inform others via fifo */
   line.s[0] = 'k';
   stralloc_append(&line, "\n");

@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.12 2000/10/06 22:01:44 drt Exp $
+/* $Id: ddns-clientd.c,v 1.13 2000/10/17 21:59:35 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
@@ -8,6 +8,9 @@
  * This file is to long!
  *
  * $Log: ddns-clientd.c,v $
+ * Revision 1.13  2000/10/17 21:59:35  drt
+ * *** empty log message ***
+ *
  * Revision 1.12  2000/10/06 22:01:44  drt
  * Library reorganisation
  *
@@ -74,7 +77,6 @@
 #include "scan.h"
 #include "sig.h"
 #include "socket.h"
-#include "socket_delay.h"
 #include "stralloc.h"
 #include "strerr.h"
 #include "timeoutconn.h"
@@ -87,7 +89,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.12 2000/10/06 22:01:44 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.13 2000/10/17 21:59:35 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 #define ARGV0 "ddns-clientd: "

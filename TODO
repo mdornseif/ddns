@@ -17,11 +17,13 @@ FEATURES
 * ddns-ipfwo: read whole database at startup
 * add hostname to s-record
 * ddns-cleand: ddns-pipe(5)
+* wrong packetsize
 
 ***
 0.02 "rage"
 
 CLEANUPS
+* traverse_dirhier in ddns-cleand 
 * seperate cdbs
 * ddns-cdbout
 * add section FILES and BUGS to all manpages

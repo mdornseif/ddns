@@ -1,6 +1,9 @@
-/* $Id: ddns.h,v 1.12 2000/10/06 13:52:48 drt Exp $
+/* $Id: ddns.h,v 1.13 2000/10/17 21:59:35 drt Exp $
  *
  * $Log: ddns.h,v $
+ * Revision 1.13  2000/10/17 21:59:35  drt
+ * *** empty log message ***
+ *
  * Revision 1.12  2000/10/06 13:52:48  drt
  * fixing VERSIONINFO coredumps
  *
@@ -103,12 +106,12 @@ struct ddnsrequest {
 };
 
 struct ddnsreply {
-  uint32 uid;
+  uint32 uid;   
   uint16 type;                             //  16
   uint16 random1;                          //  32
   uint32 magic;                            //  64
   uint32 leasetime;                        // 224
-  char reserved[36];                     // 512
+  char reserved[36];                       // 512
   /* here we will add a "you must have lost a packet"-field
      for udp as a transport
      uint32 already_set;

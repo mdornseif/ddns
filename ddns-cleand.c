@@ -1,4 +1,4 @@
-/* $Id: ddns-cleand.c,v 1.8 2000/10/06 22:01:44 drt Exp $
+/* $Id: ddns-cleand.c,v 1.9 2000/10/17 21:59:35 drt Exp $
  *  --drt@ailis.de
  *
  * cleaning daemon for ddns
@@ -10,6 +10,9 @@
  * (K)opyright is myth
  *
  * $Log: ddns-cleand.c,v $
+ * Revision 1.9  2000/10/17 21:59:35  drt
+ * *** empty log message ***
+ *
  * Revision 1.8  2000/10/06 22:01:44  drt
  * Library reorganisation
  *
@@ -65,7 +68,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.8 2000/10/06 22:01:44 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.9 2000/10/17 21:59:35 drt Exp $";
 
 #define ARGV0 "ddns-cleand: "
 
@@ -120,11 +123,11 @@ void tmpdir_clean()
    if (stat(tmpname.s,&st) == 0)
      if (time > st.st_atime + 129600)
        {
-	 unlink(tmpname.s);
-	 buffer_puts(buffer_2, "cleaned stale tmpfile ");
-	 buffer_puts(buffer_2, tmpname.s);
-	 buffer_puts(buffer_2, "\n");
-	 buffer_flush(buffer_2);
+		 unlink(tmpname.s);
+		 buffer_puts(buffer_2, "cleaned stale tmpfile ");
+		 buffer_puts(buffer_2, tmpname.s);
+		 buffer_puts(buffer_2, "\n");
+		 buffer_flush(buffer_2);
        }
   }
  closedir(dir);
@@ -161,90 +164,96 @@ int dofile(char *file, time_t ctime)
     {
       ++linenum;
       if(getln(&b, &line, &match, '\n') == -1)
-	{
-	  strerr_warn3("unable to read line: ", file, " ", &strerr_sys);
-	  return -1;
-	}
+		{
+		  strerr_warn3("unable to read line: ", file, " ", &strerr_sys);
+		  return -1;
+		}
       
       /* clean up line end */
       while(line.len) 
-	{
-	  ch = line.s[line.len - 1];
-	  if ((ch != ' ') && (ch != '\t') && (ch != '\n')) break;
-	  --line.len;
-	}
+		{
+		  ch = line.s[line.len - 1];
+		  if ((ch != ' ') && (ch != '\t') && (ch != '\n')) break;
+		  --line.len;
+		}
       
       /* skip empty lines */
       if(!line.len) 
-	{
-	  continue;
-	}
-
+		{
+		  continue;
+		}
+	  
       /* skip comments */
       if(line.s[0] == '#')
-	{
-	  continue;
-	}
+		{
+		  continue;
+		}
       
       /* split line into seperate fields */
       if(!fieldsep(f, NUMFIELDS, &line, ',')) die_nomem();
-
+	  
       if(line.s[0] == '=')
-	{	 
-	  scan_ulong(&f[2].s[0], &uid); 
-
-	  if(uid == 0)
+		{	 
+		  scan_ulong(&f[2].s[0], &uid); 
+		  
+		  if(uid == 0)
 	    {
 	      syntaxerror(file, "can't parse uid");
 	    }
-	  else
-	    {
-	      /* get info from cdb */
-	      uint32_pack(cdbkey, uid);
-	      r = cdb_find(&c, cdbkey, 4); 
-	      if (r == 1)
-		{
-		  /* read data */
-		  stralloc_ready(&data, cdb_datalen(&c));
-		  if (cdb_read(&c, data.s, cdb_datalen(&c), cdb_datapos(&c)) == -1)
-		    {
-		      strerr_warn1("error: can't read from data.cdb ", &strerr_sys);
-		    }
 		  else
-		    {
-		      data.len = cdb_datalen(&c);
-		    }
+			{
+			  /* get info from cdb */
+			  uint32_pack(cdbkey, uid);
+			  r = cdb_find(&c, cdbkey, 4); 
+			  if (r == 1)
+				{
+				  /* read data */
+				  stralloc_ready(&data, cdb_datalen(&c));
+				  if (cdb_read(&c, data.s, cdb_datalen(&c), cdb_datapos(&c)) == -1)
+					{
+					  strerr_warn1("error: can't read from data.cdb ", &strerr_sys);
+					}
+				  else
+					{
+					  data.len = cdb_datalen(&c);
+					}
+				  
+				  uint32_unpack(&data.s[16], &ttl);
+				}
+			  else
+				{
+				  /* can't find id */
+				  syntaxerror(file, "can't find user in data.cdb");
+				  uid = 0;
+				}
+			}
 		  
-		  uint32_unpack(&data.s[16], &ttl);
-		}
+		  /* files which are expired delete empty files */
+		  if((now() - ctime > ttl) || (match == 0 && linenum == 1))
+			{
+			  if(unlink(file) != 0)
+				{
+				  strerr_warn3("error: can't unlink() ", file, " ", &strerr_sys);
+				}
 	      else
-		{
-		  /* can't find id */
-		  syntaxerror(file, "can't find user in data.cdb");
-		  uid = 0;
-		}
-	    }
-	  
-	  /* files which are expired delete empty files */
-	  if((now() - ctime > ttl) || (match == 0 && linenum == 1))
-	    {
-	      if(unlink(file) != 0)
-		{
-		  strerr_warn3("error: can't unlink() ", file, " ", &strerr_sys);
-		}
-	      else
-		{
-		  strnum[fmt_ulong(strnum, uid)] = 0;
-		  buffer_puts(buffer_2, "cleaned ");
-		  buffer_puts(buffer_2, file);
-		  buffer_puts(buffer_2, " (0x");
-		  buffer_puts(buffer_2, strnum);
-		  buffer_puts(buffer_2, ")\n");
-		  buffer_flush(buffer_2);
-		  /* the file is deleted so we don't have to read further from it */
-		  // XXX leaking a filediscriptor
-		  return 0;
-		}
+			{
+			  /* inform others via ddns-pipe */ 
+			  line.s[0] = 'k';
+			  stralloc_append(&line, "\n");
+			  ddnsd_fifowrite(&line); 
+			  
+			  /* do loging */
+			  strnum[fmt_ulong(strnum, uid)] = 0;
+			  buffer_puts(buffer_2, "cleaned ");
+			  buffer_puts(buffer_2, file);
+			  buffer_puts(buffer_2, " (0x");
+			  buffer_puts(buffer_2, strnum);
+			  buffer_puts(buffer_2, ")\n");
+			  buffer_flush(buffer_2);
+			  /* the file is deleted so we don't have to read further from it */
+			  // XXX leaking a filediscriptor
+			  return 0;
+			}
 	    }
 	}
     }
@@ -272,45 +281,45 @@ int dodir(char *dirname)
   while (x = readdir(dir))
     {
       if(x == NULL)
-	{
-	  strerr_warn3("can't readdir() ", dirname, " ", &strerr_sys);
-	  return -1;
-	}
-
+		{
+		  strerr_warn3("can't readdir() ", dirname, " ", &strerr_sys);
+		  return -1;
+		}
+	  
       /* Ignore everything starting with a . */
       if(x->d_name[0] != '.')
-	{ 
-	  stralloc_copys(&name, dirname);
-	  stralloc_cats(&name, "/");
-	  stralloc_cats(&name, x->d_name);
-	  stralloc_0(&name);
-
-	  if(stat(name.s, &st) == -1)
-	    {
-	      strerr_warn2("can't stat ", name.s, &strerr_sys);
-	    }
-
-	  if(S_ISDIR(st.st_mode))
-	    {
-	      dodir(name.s);
-	    }
-	  else if(S_ISREG(st.st_mode))
-	    {
-	      dofile(name.s, st.st_ctime);
-	    }
-	  else
-	    {
-	      buffer_puts(buffer_2, "ddns-cleand: warning: ");
-	      buffer_puts(buffer_2, name.s);
-	      buffer_puts(buffer_2, " no dir and no regular file (");
-	      buffer_put(buffer_2, strnum, fmt_ulong(strnum, st.st_mode));
-	      buffer_puts(buffer_2, ")\n");
-	      buffer_flush(buffer_2);
-	    }
-	}
+		{ 
+		  stralloc_copys(&name, dirname);
+		  stralloc_cats(&name, "/");
+		  stralloc_cats(&name, x->d_name);
+		  stralloc_0(&name);
+		  
+		  if(stat(name.s, &st) == -1)
+			{
+			  strerr_warn2("can't stat ", name.s, &strerr_sys);
+			}
+		  
+		  if(S_ISDIR(st.st_mode))
+			{
+			  dodir(name.s);
+			}
+		  else if(S_ISREG(st.st_mode))
+			{
+			  dofile(name.s, st.st_ctime);
+			}
+		  else
+			{
+			  buffer_puts(buffer_2, "ddns-cleand: warning: ");
+			  buffer_puts(buffer_2, name.s);
+			  buffer_puts(buffer_2, " no dir and no regular file (");
+			  buffer_put(buffer_2, strnum, fmt_ulong(strnum, st.st_mode));
+			  buffer_puts(buffer_2, ")\n");
+			  buffer_flush(buffer_2);
+			}
+		}
     }
   closedir(dir);
-
+  
   return 0;
 }
 
@@ -320,28 +329,28 @@ int main(int argc, char *argv[])
 {
   int fd;
   char *x;
-
+  
   VERSIONINFO;
-
+  
   /* chroot() to $ROOT and switch to $UID:$GID */
   droprootordie("ddns-cleand: ");
-
+  
   if (!argv[1]) 
     strerr_die1x(100, "fatal: usage: ddns-cleand dnsdir");
-
+  
   buffer_puts(buffer_2, "ddns-cleand: starting\n");
   buffer_flush(buffer_2);
-
+  
   /* SIGALRM can be used to force cleaning now */
   sig_catch(sig_alarm, sigalrm);
-
+  
   for (;;)
     {
       /* we reopen data.cdb for every pass over the database */
-
+	  
       fd = open_read("data.cdb");
       if (fd == -1) 
-	  strerr_die1sys(111, "can't open data.cdb ");
+		strerr_die1sys(111, "can't open data.cdb ");
       
       cdb_init(&c, fd);
       
@@ -350,22 +359,21 @@ int main(int argc, char *argv[])
       
       cdb_free(&c);
       close(fd);
-
+	  
       /* clean up tmp */
       x = env_get("DDNSDONTCLEANTMP");
       if (!x)
-	tmpdir_clean();
+		tmpdir_clean();
       
       sleep(interval);
-
+	  
       /* check for SIGALRM */
       if(flagrunasap == 1)
-	{
-	  flagrunasap = 0;
-	  
-	  buffer_puts(buffer_2, "recived SIGALRM starting to clean\n");
-	  buffer_flush(buffer_2);
-	}
+		{
+		  flagrunasap = 0;
+		  
+		  buffer_puts(buffer_2, "recived SIGALRM starting to clean\n");
+		  buffer_flush(buffer_2);
+		}
     }
-
 }
