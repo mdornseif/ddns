@@ -1,14 +1,19 @@
-CFLAGS=-g
+DOWNLOADER = "wget"
 
-defaut: ddnsd ddnsc ddnsd-data
+CFLAGS=-g -Idnscache -Ilibtai -Idjblib  
 
-ddnsd: ddnsd.o lib/tools.a djblib/djblib.a
+defaut: ddnsd ddnsc ddnsd-data filedns
+
+ddnsd: ddnsd.o tools.a dnscache.a libtai.a djblib/djblib.a
 	gcc -o $@ $^
 
-ddnsc: ddnsc.o lib/tools.a djblib/djblib.a
+ddnsc: ddnsc.o tools.a dnscache.a libtai.a djblib/djblib.a
 	gcc -o $@ $^
 
-ddnsd-data: ddnsd-data.o lib/tools.a djblib/djblib.a
+ddnsd-data: ddnsd-data.o tools.a dnscache.a libtai.a djblib/djblib.a
+	gcc -o $@ $^
+
+filedns: filedns.o dnscache/server.o dnscache/response.o dnscache/qlog.o dnscache/prot.o dnscache/dd.o libtai.a dnscache.a djblib/djblib.a
 	gcc -o $@ $^
 
 djblib/djblib.a: 
@@ -16,15 +21,48 @@ djblib/djblib.a:
 	make
 	cd ..
 
-lib/tools.a:
-	cd lib
-	make
-	cd ..
+tools.a:
+	cd lib; \
+	make; \
+	ar cr ../tools.a *.o; 
+
+dnscache.a:
+	if [ ! -d dnscache ]; then \
+		$(DOWNLOADER) http://cr.yp.to/dnscache/dnscache-1.00.tar.gz; \
+		tar xzvf dnscache-1.00.tar.gz; rm dnscache-1.00.tar.gz; \
+		mv dnscache-1.00 dnscache; \
+        fi;	
+	cd dnscache; \
+	make; \
+	grep -l ^main *.c | perl -npe 's/^(.*).c/\1.o/;' | xargs rm -f; \
+	ar cr ../dnscache.a *.o;
+
+libtai.a:
+	if [ ! -d libtai ]; then \
+		$(DOWNLOADER) http://cr.yp.to/libtai/libtai-0.60.tar.gz; \
+		tar xzvf libtai-0.60.tar.gz; rm libtai-0.60.tar.gz; \
+		mv libtai-0.60 libtai;\
+	fi	
+	cd libtai; \
+	make; \
+	grep -l ^main *.c | perl -npe 's/^(.*).c/\1.o/;' | xargs rm -f; \
+	ar cr ../libtai.a *.o; 	
+
+libs:
+	if [ ! -f djblib/djblib.a ]; then \
+		cd djblib; \
+		make; \
+		cd ..; \
+	fi;
 
 clean:
-	rm -f *.o *.a ddnsd ddnsd-data ddnsc
+	rm -f *.o *.a ddnsd ddnsd-data ddnsc filedns
 
-distclean: clean
+realclean: clean
+	cd dnscache; rm -f `cat TARGETS`
+	cd libtai; rm -f `cat TARGETS`
+	cd lib ; make clean
+
+distclean: realclean
 	rm -f *~ *.cdb
-	(cd djblib && make distclean)
-	(cd lib && make distclean)
+	cd lib ; make distclean
