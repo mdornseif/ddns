@@ -1,8 +1,13 @@
-/* $Id: ddnsd.c,v 1.3 2000/04/21 06:58:36 drt Exp $
+/* $Id: ddnsd.c,v 1.4 2000/04/24 16:35:02 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.4  2000/04/24 16:35:02  drt
+ * First basically working version implementing full protocol
+ * RENEWENTRY and KILLENTRY finalized
+ * logging added
+ *
  * Revision 1.3  2000/04/21 06:58:36  drt
  * *** empty log message ***
  *
@@ -15,6 +20,7 @@
  */
 
 #include <sys/stat.h>
+#include <utime.h>
 #include <errno.h>
 
 #include "djblib/buffer.h"
@@ -64,17 +70,9 @@ void ddnsd_send(struct ddnsreply *p)
   buffer_flush(buffer_1); 
 }
 
-/* Sends an error packet to the client and logs an error */
-void ddnsd_send_err(uint32 uid, uint16 errtype, char *errstr)
+void ddnsd_log(uint32 uid, char *str)
 {
-  char strnum[FMT_ULONG];
-  struct ddnsreply p = { 0 };
-  
-  p.type = errtype;
-  p.uid = uid;
-
-  /* leasetime is unused when sending error packets so we fill it with random data */
-  p.leasetime.x = (uint64) (randomMT() & (uint64)((uint64)randomMT() << 32));
+ char strnum[FMT_ULONG];
 
   /* Do logging */
   buffer_puts(buffer_2, remotehost);
@@ -87,10 +85,24 @@ void ddnsd_send_err(uint32 uid, uint16 errtype, char *errstr)
   buffer_puts(buffer_2, " ");
   buffer_put(buffer_2, strnum, fmt_ulong(strnum, uid));
   buffer_puts(buffer_2, ": ");
-  buffer_puts(buffer_2, errstr);
+  buffer_puts(buffer_2, str);
   buffer_puts(buffer_2, "\n");
   buffer_flush(buffer_2);
+}
 
+/* Sends an error packet to the client and logs an error */
+void ddnsd_send_err(uint32 uid, uint16 errtype, char *errstr)
+{
+  struct ddnsreply p = { 0 };
+  
+  p.type = errtype;
+  p.uid = uid;
+
+  /* leasetime is unused when sending error packets so we fill it with random data */
+  p.leasetime.x = (uint64) (randomMT() & (uint64)((uint64)randomMT() << 32));
+
+  ddnsd_log(uid, errstr);
+ 
   ddnsd_send(&p);
 
   exit(111);
@@ -244,6 +256,8 @@ void ddnsd_setentry( struct ddnsrequest *p)
       stralloc_catulong0(&tmpname, getpid(), 0); 
       stralloc_cats(&tmpname, "."); 
       stralloc_cats(&tmpname, host); 
+      stralloc_cats(&tmpname, "-"); 
+      stralloc_cats(&tmpname, username.s); 
       stralloc_0(&tmpname);
       
       if (stat(tmpname.s,&st) == -1) if (errno == error_noent) break;
@@ -315,6 +329,8 @@ void ddnsd_setentry( struct ddnsrequest *p)
       ddnsd_send_err_sys(p->uid, err.s);
     }
   
+  ddnsd_log(p->uid, "setting entry");
+
   /* construct the answer Packet */
   r.type = DDNS_T_ACK;
   r.uid = p->uid;
@@ -328,6 +344,8 @@ void ddnsd_renewentry( struct ddnsrequest *p)
 {
   struct ddnsreply r = { 0 };
   stralloc tmpname = { 0 };
+  struct stat st = {0};
+  struct utimbuf ut;
 
   /* create the final name */
   stralloc_copys(&tmpname, datadir);
@@ -335,7 +353,24 @@ void ddnsd_renewentry( struct ddnsrequest *p)
   stralloc_cat(&tmpname, &username);
   stralloc_0(&tmpname);
 
-  utime(tmpname.s, NULL);
+  if(stat(tmpname.s, &st) == -1)
+    {
+      if(errno == ENOENT)
+	{
+	  // File not found
+	  ddnsd_send_err(p->uid, DDNS_T_ENOENTRYUSED, "entry can't be renewed");
+	}
+      else
+	{
+	  ddnsd_send_err_sys(p->uid, tmpname.s);
+	}
+    }
+
+  ut.actime = st.st_atime;
+  ut.modtime = st.st_mtime;
+  utime(tmpname.s, &ut);
+
+  ddnsd_log(p->uid, "renewing entry");
 
   /* construct the answer Packet */
   r.type = DDNS_T_ACK;
@@ -356,7 +391,20 @@ void ddnsd_killentry( struct ddnsrequest *p)
   stralloc_cat(&tmpname, &username);
   stralloc_0(&tmpname);
 
-  unlink(tmpname.s);
+  if(unlink(tmpname.s) == -1)
+    {
+      if(errno == ENOENT)
+	{
+	  // File not found
+	  ddnsd_send_err(p->uid, DDNS_T_ENOENTRYUSED, "entry can't be killed");
+	}
+      else
+	{
+	  ddnsd_send_err_sys(p->uid, tmpname.s);
+	}
+    }
+
+  ddnsd_log(p->uid, "killing entry");
 
   /* construct the answer Packet */
   r.type = DDNS_T_ACK;
@@ -410,16 +458,16 @@ main()
   switch(p.type)
     {
     case DDNS_T_SETENTRY:
+      ddnsd_log(p.uid, "setentry request");
       ddnsd_setentry(&p);
       break;
     case DDNS_T_RENEWENTRY:
+      ddnsd_log(p.uid, "renewentry request");
       ddnsd_renewentry(&p);
       break;
     case DDNS_T_KILLENTRY:       
-      r.type = DDNS_T_NAK;
-      r.uid = p.uid;
-      r.leasetime.x = 2300;	 
-      ddnsd_send(&r);
+      ddnsd_log(p.uid, "killentry request");
+      ddnsd_killentry(&p);
       break;
     default:
       ddnsd_send_err(p.uid, DDNS_T_EUNSUPPTYPE, "unsupported type/command");
