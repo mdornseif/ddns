@@ -1,9 +1,12 @@
-/* $Id: ddns-ipfwo.linux.c,v 1.2 2000/08/02 20:13:22 drt Exp $
+/* $Id: ddns-ipfwo.linux.c,v 1.3 2000/08/09 15:43:30 drt Exp $
  *  -- drt@ailis.de
  *
  * Linux specific daemon for changing firewall rules on the fly
  *
  * $Log: ddns-ipfwo.linux.c,v $
+ * Revision 1.3  2000/08/09 15:43:30  drt
+ * ipfwo.linux is now shomehow mature
+ *
  * Revision 1.2  2000/08/02 20:13:22  drt
  * -V
  *
@@ -40,12 +43,12 @@
 #include "uint32.h"
 
 #include "ddns.h"
-//xs#include "libipfwc.h"
+//#include "libipfwc.h"
 
-static char rcsid[] = "$Id: ddns-ipfwo.linux.c,v 1.2 2000/08/02 20:13:22 drt Exp $";
+static char rcsid[] = "$Id: ddns-ipfwo.linux.c,v 1.3 2000/08/09 15:43:30 drt Exp $";
 
 #define ARGV0 "ddns-ipfwo: "
-#define FATAL "ddns-ipfwo: "
+#define FATAL "ddns-ipfwo: fatal: "
 #define FIFONAME "ddns-ipfwo"
 
 static char waitreadspace[1024];
@@ -54,6 +57,9 @@ static int sock;
 
 /* uppercase in reference to k */
 static struct ip_fwchange SFWChange;
+static struct ip_fwnew SFWNew;
+
+
 void die_nomem(void)
 {
   strerr_die2sys(111, FATAL, "oh no - no memory: ");
@@ -101,27 +107,41 @@ void doit()
 	      if(getln(&wr, &fifoline, &match, '\n') == -1)
 		continue;
 	      
+	      buffer_put(buffer_2, &ch, 1);
+	      buffer_putflush(buffer_2, fifoline.s, fifoline.len);
+
 	      switch(ch)
 		{
 		case 's':
-		case 'r':
+		case 'k':
 		  ddns_parseline(fifoline.s, &uid, ip4, ip6, loc);
-		  SFWChange.fwc_rule.ipfw.fw_src.s_addr = ip4;
+		  SFWChange.fwc_rule.ipfw.fw_src.s_addr = ip4[0] << 24 | ip4[1] << 16 | ip4[2] << 8 | ip4[3];
 		  SFWChange.fwc_rule.ipfw.fw_smsk.s_addr = 0xffffffff;
 		  SFWChange.fwc_rule.ipfw.fw_dst.s_addr = 0;
-		  SFWChange.fwc_rule.ipfw.fw_dmsk.s_addr = 0;
-		  
-		  byte_copy(SFWChange.fwc_rule.label, sizeof(SFWChange.fwc_rule.label), "ddns-ok\0\0"); // target
-		  byte_copy(SFWChange.fwc_label, sizeof(SFWChange.fwc_label), "ddns\0\0\0\0\0"); // chain to add to
+		  SFWChange.fwc_rule.ipfw.fw_dmsk.s_addr = 0;		  
+
+		  byte_zero(SFWChange.fwc_rule.label, sizeof(SFWChange.fwc_rule.label));
+		  byte_zero(SFWChange.fwc_label, sizeof(SFWChange.fwc_label));
+		  str_copy(SFWChange.fwc_rule.label, "ddns-ok"); // target
+		  str_copy(SFWChange.fwc_label, "ddns"); // chain to add to
+
 		  if(ch == 's')
 		    {
-		      if(setsockopt(sock, IPPROTO_IP, IP_FW_INSERT, &SFWChange, sizeof(SFWChange)))
-			strerr_die2sys(111, FATAL, "can't append default rule: " ); 
+		      byte_copy(&SFWNew.fwn_rule, sizeof(struct ip_fwuser), &SFWChange.fwc_rule);
+		      byte_zero(SFWNew.fwn_label, sizeof(SFWNew.fwn_label));
+		      str_copy(SFWNew.fwn_label, "ddns"); // chain to add to
+		      SFWNew.fwn_rulenum = 1;
+
+		      if(setsockopt(sock, IPPROTO_IP, IP_FW_INSERT, &SFWNew, sizeof(SFWNew)))
+			strerr_die2sys(111, FATAL, "can't insert rule: " ); 
 		    }
 		  else
 		    {
+
+		      buffer_putsflush(buffer_2, "DELETING\n");
+
 		      if(setsockopt(sock, IPPROTO_IP, IP_FW_DELETE, &SFWChange, sizeof(SFWChange)))
-			strerr_die2sys(111, FATAL, "can't append default rule: " ); 
+			strerr_die2sys(111, ARGV0, "warning: can't delete rule: " );  
 		    }
 		}
 	    }
@@ -132,9 +152,22 @@ void doit()
 int main(int argc, char **argv)
 {
   int fdfifo, fdfifowrite;
+  uint32 gid, uid;
   char *x;
 
   VERSIONINFO;
+
+  x = env_get("GID");
+  if (!x)
+    strerr_die2x(111, FATAL, "$GID not set");
+  scan_ulong(x,&gid);
+  if (prot_gid((int) gid) == -1)
+    strerr_die2sys(111, FATAL, "unable to setgid: ");
+
+  x = env_get("UID");
+  if (!x)
+    strerr_die2x(111, FATAL, "$UID not set");
+  scan_ulong(x,&uid);
 
   x = env_get("WORKDIR");
   if (!x)
@@ -154,13 +187,19 @@ int main(int argc, char **argv)
   buffer_putsflush(buffer_2, ARGV0 "starting\n");
 
   if(fifo_make(FIFONAME, 0620) == -1)
-    strerr_warn4(ARGV0, "unable to create fifo ", FIFONAME, " ", &strerr_sys);
+    strerr_warn4(ARGV0, "warning: unable to create fifo ", FIFONAME, " ", &strerr_sys);
 
   fdfifo = open_read(FIFONAME);
   if(fdfifo == -1)
     strerr_die4sys(111, FATAL, "unable to open for read ", FIFONAME, " ");
   coe(fdfifo);
   ndelay_on(fdfifo); /* DJB says: shouldn't be necessary */
+
+  /* we have to chmod since wo don't know what umask did to our mkfifo */
+ if(chmod(FIFONAME, 0620) == -1)
+    strerr_die4sys(111, FATAL, "unable to chmod() fifo ", FIFONAME, " "); 
+ if(chown(FIFONAME, uid, gid) == -1)
+    strerr_die4sys(111, FATAL, "unable to chown() fifo ", FIFONAME, " "); 
 
   /* we need this to keep the fifo from beeing closed */
   fdfifowrite = open_write(FIFONAME);
@@ -196,40 +235,40 @@ int main(int argc, char **argv)
   str_copy(SFWChange.fwc_rule.ipfw.fw_vianame,"");
 
   if(setsockopt(sock, IPPROTO_IP, IP_FW_CREATECHAIN, "ddns-ko\0\0", 9))
-    strerr_warn2(ARGV0, "unable to create chain ddns-ko, will leave it alone: ", &strerr_sys);
+    strerr_warn2(ARGV0, "warning: unable to create chain ddns-ko (will leave it alone): ", &strerr_sys);
   else
     {
       str_copy(SFWChange.fwc_rule.label, "REJECT"); // target
-      str_copy(SFWChange.fwc_label,"ddns-ko"); // chain to add to
+      str_copy(SFWChange.fwc_label, "ddns-ko"); // chain to add to
       
       if (setsockopt(sock, IPPROTO_IP, IP_FW_APPEND, &SFWChange, sizeof(SFWChange)))
-	strerr_die2sys(111, FATAL, "can't append default rule: "); 
+	strerr_die2sys(111, FATAL, "can't append default rule to chain ddns-ko: "); 
     }
 
   if(setsockopt(sock, IPPROTO_IP, IP_FW_CREATECHAIN, "ddns-ok\0\0", 9))
-    strerr_warn2(ARGV0, "unable to create chain ddns-ok, will leave it alone: ", &strerr_sys);
+    strerr_warn2(ARGV0, "warning: unable to create chain ddns-ok (will leave it alone): ", &strerr_sys);
   else
     {
       str_copy(SFWChange.fwc_rule.label, "ACCEPT"); // target
-      str_copy(SFWChange.fwc_label,"ddns-ok"); // chain to add to
+      str_copy(SFWChange.fwc_label, "ddns-ok"); // chain to add to
 
       if(setsockopt(sock, IPPROTO_IP, IP_FW_APPEND, &SFWChange, sizeof(SFWChange)))
-	strerr_die2sys(111, FATAL, "can't append default rule: " ); 
+	strerr_die2sys(111, FATAL, "can't append default rule to chain ddns-ok: " ); 
     }
 
   if(setsockopt(sock, IPPROTO_IP, IP_FW_CREATECHAIN, "ddns\0\0\0\0\0", 9))
-    strerr_warn2(ARGV0, "trying to flush chain ddns because i was unable to create it, reason: ", &strerr_sys);
-  else
     {
+      strerr_warn2(ARGV0, "warning: unable to create chain ddns (will try to flush it): ", &strerr_sys);
+    
       if(setsockopt(sock, IPPROTO_IP, IP_FW_FLUSH, "ddns\0\0\0\0\0", 9))
-	strerr_die2sys(111, FATAL, "couldn't flush: "); 
+	strerr_die2sys(111, FATAL, "couldn't flush chain ddns: "); 
     }
-
+  
   byte_copy(SFWChange.fwc_rule.label, sizeof(SFWChange.fwc_rule.label), "ddns-ko\0\0"); // target
   byte_copy(SFWChange.fwc_label, sizeof(SFWChange.fwc_label), "ddns\0\0\0\0\0"); // chain to add to
   
   if(setsockopt(sock, IPPROTO_IP, IP_FW_APPEND, &SFWChange, sizeof(SFWChange)))
-    strerr_die2sys(111, FATAL, "can't append default rule: " ); 
+    strerr_die2sys(111, FATAL, "can't append default rule to chain ddns: " ); 
 
   doit();
 

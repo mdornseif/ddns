@@ -1,9 +1,12 @@
-/* $Id: ddnsd_killentry.c,v 1.1 2000/07/31 19:03:17 drt Exp $
+/* $Id: ddnsd_killentry.c,v 1.2 2000/08/09 15:43:30 drt Exp $
  *  -- drt@ailis.de - http://rc23.cx/
  *
  * (K)allisti 2000 a.D. - all rights reversed
  *
  * $Log: ddnsd_killentry.c,v $
+ * Revision 1.2  2000/08/09 15:43:30  drt
+ * ipfwo.linux is now shomehow mature
+ *
  * Revision 1.1  2000/07/31 19:03:17  drt
  * initial revision
  *
@@ -21,7 +24,7 @@
 #include "ddns.h"
 #include "ddnsd.h"
 
-static char rcsid[] = "$Id: ddnsd_killentry.c,v 1.1 2000/07/31 19:03:17 drt Exp $";
+static char rcsid[] = "$Id: ddnsd_killentry.c,v 1.2 2000/08/09 15:43:30 drt Exp $";
 
 
 /* the user requested to delete his entry from the dns */
@@ -48,7 +51,7 @@ void ddnsd_killentry( struct ddnsrequest *p, uint32 *ttl, stralloc *username)
   
   buffer_init(&b, read, fd, bspace, sizeof bspace);
   
-  /* Work through the file and handout the data. */
+  /* Work through the file */
   while(match) 
     {
       if(getln(&b, &line, &match, '\n') == -1)
@@ -85,6 +88,7 @@ void ddnsd_killentry( struct ddnsrequest *p, uint32 *ttl, stralloc *username)
  
   /* inform others via fifo */
   line.s[0] = 'k';
+  stralloc_append(&line, "\n");
   ddnsd_fifowrite(&line); 
 }
 

@@ -1,7 +1,6 @@
-BETA 0.1
+BETA 0.01
 
 ERRORS
-* ddnsd is not handling tracedir/
 * stat(2) seems to be completly freaked out on my LinuxPPC, find out why.
 * ddns-pipe.5
 * ddns-file-5
@@ -29,7 +28,7 @@ FEATURES
 
 *****
 
-VERSION 0.2
+VERSION 0.02
 
 CLEANUPS
 * all long runbning daemons: check for memory/filedescriptor leaks
