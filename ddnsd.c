@@ -1,8 +1,12 @@
-/* $Id: ddnsd.c,v 1.13 2000/07/07 13:32:47 drt Exp $
+/* $Id: ddnsd.c,v 1.14 2000/07/12 11:46:01 drt Exp $
  *
  * server for ddns - this file is to long
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.14  2000/07/12 11:46:01  drt
+ * checking of random1 == random2 to keep
+ * a attacker from exchanging single blocks
+ *
  * Revision 1.13  2000/07/07 13:32:47  drt
  * ddnsd and ddnsc now basically work as they should and are in
  * a usable state. The protocol is changed a little bit to lessen
@@ -85,7 +89,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.13 2000/07/07 13:32:47 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.14 2000/07/12 11:46:01 drt Exp $";
 
 static char *datadir;
 
@@ -336,6 +340,11 @@ int ddnsd_recive(struct ddnsrequest *p)
       if(p->magic != DDNS_MAGIC)
 	/* propably decryption didn't suceed */
 	ddnsd_send_err(p->uid, DDNS_T_EWRONGMAGIC, "wrong magic");
+
+      /* check for random1 and random2 beeing equal */
+      if(p->random1 != p->random2)
+	/* propably decryption didn't suceed */
+	ddnsd_send_err(p->uid, DDNS_T_ECANTDECRYPT, "alert: someone tampered with the request");
       
       /* everything is fine */
       return p->type;
@@ -435,7 +444,7 @@ void ddnsd_setentry( struct ddnsrequest *p)
 	/* else: everything is fine, the File doesn't exist */
     }
   else
-    // XXX: this error can happpen with ither conditions too - fixme
+    // XXX: this error can happpen with other conditions too - fixme
     ddnsd_send_err(p->uid, DDNS_T_EALLREADYUSED, "allready registered");
 
   /* move tmp file to final file */
