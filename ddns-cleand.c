@@ -1,4 +1,4 @@
-/* $Id: ddns-cleand.c,v 1.4 2000/07/17 21:45:24 drt Exp $
+/* $Id: ddns-cleand.c,v 1.5 2000/07/29 21:50:37 drt Exp $
  *  --drt@ailis.de
  *
  * cleaning daemon for ddns
@@ -10,6 +10,10 @@
  * (K)opyright is myth
  *
  * $Log: ddns-cleand.c,v $
+ * Revision 1.5  2000/07/29 21:50:37  drt
+ * field seperation now is extern
+ * line parsing still has to moved put
+ *
  * Revision 1.4  2000/07/17 21:45:24  drt
  * ddnsd and ddns-cleand now refuse to run as root
  *
@@ -34,7 +38,6 @@
 #include "buffer.h"
 #include "byte.h"
 #include "cdb.h"
-#include "droprootordie.h"
 #include "env.h"
 #include "error.h"
 #include "fmt.h"
@@ -47,9 +50,13 @@
 #include "stralloc.h"
 #include "strerr.h"
 
+#include "droprootordie.h"
+#include "fieldsep.h"
+#include "traversedirhier.h"
+
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.4 2000/07/17 21:45:24 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.5 2000/07/29 21:50:37 drt Exp $";
 
 /* maximum number of fields in a line */
 #define NUMFIELDS 10
@@ -61,7 +68,7 @@ static stralloc tmpname = {0};
 stralloc data = { 0 };
 stralloc line = { 0 };
 
-void nomem(void)
+static void die_nomem(void)
 {
   strerr_die1sys(111, "ddns-cleand fatal: no memory");
 }
@@ -123,7 +130,7 @@ int dofile(char *file, time_t ctime)
   char strnum[FMT_ULONG];
   int fd;
   int match = 1;
-  int r, i, j, k;
+  int r;
   uint32 ttl = 17;
   uint32 uid = 0;
   buffer b;
@@ -133,7 +140,7 @@ int dofile(char *file, time_t ctime)
   if (fd == -1) 
     {
       strerr_warn3("unable to open file: ", file, " ", &strerr_sys);
-      return -1;
+      return;
     }
   
   buffer_init(&b, read, fd, bspace, sizeof bspace);
@@ -148,7 +155,7 @@ int dofile(char *file, time_t ctime)
       if(getln(&b, &line, &match, '\n') == -1)
 	{
 	  strerr_warn3("unable to read line: ", file, " ", &strerr_sys);
-	  return -1;
+	  return;
 	}
       
       /* clean up line end */
@@ -172,30 +179,11 @@ int dofile(char *file, time_t ctime)
 	}
       
       /* split line into seperate fields */
-      j = 0;
-      for (i = 0;i < NUMFIELDS;++i) 
-	{
-	  if (j >= line.len) 
-	    {
-	      if (!stralloc_copys(&f[i],"")) 
-		{
-		  nomem();
-		}
-	    }
-	  else 
-	    {
-	      k = byte_chr(line.s + j,line.len - j,',');
-	      if (!stralloc_copyb(&f[i],line.s + j,k)) 
-		{
-		  nomem();
-		}
-	      j += k + 1;
-	    }
-	}
+      if(!fieldsep(f, NUMFIELDS, &line, ',')) die_nomem();
 
       if(line.s[0] == '=')
 	{	 
-	  scan_xlong(&f[2].s[2], &uid); 
+	  scan_ulong(&f[2].s[0], &uid); 
 
 	  if(uid == 0)
 	    {
@@ -229,7 +217,7 @@ int dofile(char *file, time_t ctime)
 		}
 	    }
 	  
-	  /* delete empty files or files which are expired */
+	  /* files which are expired delete empty files */
 	  if((now() - ctime > ttl) || (match == 0 && linenum == 1))
 	    {
 	      if(unlink(file) != 0)
@@ -246,7 +234,7 @@ int dofile(char *file, time_t ctime)
 		  buffer_puts(buffer_2, ")\n");
 		  buffer_flush(buffer_2);
 		  /* the file is deleted so we don't have to read further from it */
-		  return 0;
+		  return;
 		}
 	    }
 	}
@@ -254,13 +242,14 @@ int dofile(char *file, time_t ctime)
 
   close(fd);
 
-  return 0;
+  return;
 }
 
 int dodir(char *dirname)
 {
   stralloc name = {0};
   DIR *dir = NULL;
+  char strnum[FMT_ULONG];
   struct dirent *x = NULL;
   struct stat st = {0};
 
@@ -302,7 +291,12 @@ int dodir(char *dirname)
 	    }
 	  else
 	    {
-	      strerr_warn2(x->d_name, " no dir and no regular file ", &strerr_sys);
+	      buffer_puts(buffer_2, "ddns-cleand: warning: ");
+	      buffer_puts(buffer_2, name.s);
+	      buffer_puts(buffer_2, " no dir and no regular file (");
+	      buffer_put(buffer_2, strnum, fmt_ulong(strnum, st.st_mode));
+	      buffer_puts(buffer_2, ")\n");
+	      buffer_flush(buffer_2);
 	    }
 	}
     }
@@ -324,6 +318,9 @@ int main(int argc, char *argv[])
   if (!argv[1]) 
     strerr_die1x(100, "fatal: usage: ddns-cleand dnsdir");
 
+  buffer_puts(buffer_2, "ddns-cleand: starting\n");
+  buffer_flush(buffer_2);
+
   /* SIGALRM can be used to force cleaning now */
   sig_alarmcatch(sigalrm);
   
@@ -333,7 +330,7 @@ int main(int argc, char *argv[])
 
       fd = open_read("data.cdb");
       if (fd == -1) 
-	  strerr_die1sys(111, "can't open data.cdb");
+	  strerr_die1sys(111, "can't open data.cdb ");
       
       cdb_init(&c, fd);
       
