@@ -1,8 +1,13 @@
-/* $Id: ddnsc.c,v 1.10 2000/07/12 11:34:25 drt Exp $
+/* $Id: ddnsc.c,v 1.11 2000/07/14 23:57:56 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.11  2000/07/14 23:57:56  drt
+ * Added documentation in README and manpage for
+ * ddns-clientd, rewriting of 0.0.0.1 in ddns-cliend
+ * fixes in ddnsc.c and ddns-client.c
+ *
  * Revision 1.10  2000/07/12 11:34:25  drt
  * ddns-clientd handels now everything itself.
  * ddnsc is now linked to ddnsd-clientd, do a
@@ -63,52 +68,9 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsc.c,v 1.10 2000/07/12 11:34:25 drt Exp $";
+static char rcsid[] = "$Id: ddnsc.c,v 1.11 2000/07/14 23:57:56 drt Exp $";
 
 #define FATAL "ddns-client: "
-
-int fd;
-buffer b;
-char bspace[1024];
-char netreadspace[128];
-
-void die_usage(void)
-{
-  strerr_die1x(111, "usage: ddnsc uid myip (s|r|k)");
-}
-
-int saferead(int fd,char *buf,unsigned int len)
-{
-  int r;
-
-  r = timeoutread(120,fd,buf,len);
-  if (r == 0) 
-    { 
-      errno = error_proto; 
-      strerr_die2sys(111, FATAL, "unable to read from server ");
-    }
-  
-  if (r <= 0) 
-    strerr_die2sys(111, FATAL, "unable to read from server ");
-
-  return r;
-}
-
-int safewrite(int fd,char *buf,unsigned int len)
-{
-  int r;
-  
-  r = timeoutwrite(60, fd, buf, len);
-  if (r <= 0) 
-    strerr_die2sys(111, FATAL, "unable to write to network: ");
-  
-  return r;
-}
-
-buffer netread = BUFFER_INIT(saferead, 6, netreadspace, sizeof netreadspace);
-char netwritespace[128];
-buffer netwrite = BUFFER_INIT(safewrite, 7, netwritespace, sizeof netwritespace);
-
 
 /* read, decode and decrypt packet */
 int ddnsc_recive(struct ddnsreply *p)
@@ -118,7 +80,7 @@ int ddnsc_recive(struct ddnsreply *p)
 
   r = timeoutread(120, 6, &ptmp, sizeof(struct ddnsreply));
   if(r != 68)
-    strerr_die1x(100, "wrong packetsize");
+    strerr_die2x(100, FATAL, "wrong packetsize");
   
   uint32_unpack((char*) &ptmp.uid, &p->uid);
   
@@ -136,10 +98,10 @@ int ddnsc_recive(struct ddnsreply *p)
   uint32_unpack((char*) &ptmp.leasetime, &p->leasetime);
 
   if(p->uid == 0)
-    strerr_die1x(100, "user unknown to server"); 
+    strerr_die2x(100, FATAL, "user unknown to server"); 
 
   if(p->magic != DDNS_MAGIC)
-    strerr_die1x(100, "wrong magic");
+    strerr_die2x(100, FATAL, "wrong magic");
   
   return p->type;
 }
@@ -178,9 +140,8 @@ static void ddnsc_send(struct ddnsrequest *p, char *key)
   rijndaelEncrypt((char *) &ptmp.type);
   rijndaelEncrypt((char *) &ptmp.type + 32);  
 
-  /* XXX: Why use bufferd I/O? */
-  buffer_put(&netwrite, (char *) &ptmp, sizeof(struct ddnsrequest));
-  buffer_flush(&netwrite); 
+  if(timeoutwrite(60, 7, &ptmp, sizeof(struct ddnsrequest)) != 68)
+    strerr_die2sys(100, FATAL, "couldn't write to network: ");
 }
 
 /* handle client <-> server communication */
@@ -188,10 +149,6 @@ int ddnsc(int type, uint32 uid, char *ip4, char *ip6, struct loc_s *loc, char *k
 {
   struct ddnsrequest p = {0};
   struct ddnsreply r = {0};
-  unsigned char ip[4] = {0};
-  int a;
-  char *x;
-  char strnum[FMT_ULONG];
   
   p.type = type;
   p.uid = uid;

@@ -1,5 +1,12 @@
 Setting up a client:
 
+Go to the ddns directory and type
+$ make client
+$ sudo make setup-client
+
+The buildprocess will fetch three files from the internet using wget.
+If you don't have wget installed you have to edit the Makefile.
+
 You have know your DDNS-UID (100 in this example) and your shared
 secret ('superNikNik' in theis example.  After you fired up your
 internet connection try someting like
@@ -34,10 +41,27 @@ Address:  1.2.3.4
 
 Welcome to the exciting world of dynamic dns!
 
+You can insert ddns-clientd in the script you use for fireing up
+your internet connection and put a "killall ddns-clientd; sleep 2" 
+in your internet down script yust before you shutdown the connection.
+
+I use 
+
+./ddns/ddns-clientd `netstat -i -n | grep "isp0  1500  0" | cut -b 27-41` 0 50 57 9.7 N 6 54 08.3 E 5700 1500 7500
+
+on my freebsd-4.0 box to insert automagically my actual IPv4
+address.
+
+
+
 ... more to follow
 
 drt@ailis.de
 
+
+
 PLATFORMS
 freebsd-4.0-release-:i386-:-:-:-
-linux-2.2.14-:i386-:-:genuineintel-0000052c-000001bf-:-
+linux-2.0.36-:i386-:-:genuineintel-:-
+linux-2.2.14-:i386-:-:genuineintel-:-
+linux-2.2.14-:i386-:-:genuineintel-:-

@@ -1,0 +1,126 @@
+.TH ddns-cleand 8
+.SH NAME
+ddns-clientd \- client for the ddns protocol
+.SH SYNOPSIS
+.B ddns-clientd IPv4 IPv6 deg min sec.frac (N|S) deg min sec.frac (E|W) alt [size [hpre [vpre]]]  
+.SH DESCRIPTION
+.B ddns-clientd
+is a client for the 
+.I ddns 
+protocol
+.P
+.B ddns-client 
+connects to a ddns server defined by the enviroment variables
+.I $DDNS_SERVER_ADDR
+and
+.IR $DDNS_SERVER_PORT .
+It then tries to register at server using the user ID form the
+enviroment variable 
+.I $DDNS_UID
+and the shared secret from the enviroment variable
+.IR $KEY.
+.P
+If registration succedes the server answers with a 
+.I leasetime
+in which the client must renew his connection.
+.B ddns-clientd
+sleeps for 
+.IR leasetime -
+17 seconds, renews the registration and starts over sleeping.
+.P
+If 
+.B ddns-clientd
+recives a 
+.I SIGTERM 
+or 
+.I SIGINT
+it will delete its registration at the server and exit.
+If it recives a
+.I SIGALRM
+it will stop sleeping and renew it resistration imidiatly.
+.P
+.B IPv4 
+must be an dotted decimal IPv4 address or 
+.BR 0 .
+.B IPv6
+must be a coloned hexadecimal IPv6 address or 
+.BR 0 . 
+The rest describes a location on the WGS84 elipsoid (think 
+of it as the earth). The Format is mostly compatible with the
+Format used for 
+.I DNS LOC
+recurce records in 
+.IR bind s 
+zone files which is described in
+.I RfC 
+.IR 1876 .
+The only difference is that distances are only allowed in centimeters.
+.P
+The first eight values describe 
+.I latitude
+and
+.I longitude
+in degrees, minutes seconds and fracture of seconds.
+.P 
+The next value gives the altitude above the WGS84 elipsoid. You 
+can use sea level as an aproximation. The
+.I alt
+value can be positive or negative.
+.P 
+The 
+.I size
+value sets the diameter of the sphere describing the size 
+of the location you describe. If left out it will default to 
+100 cm.
+.P
+.I hpre
+and
+.I vpre
+describe the horizontal and vertical precision of your data. 
+.I hpre 
+defaults to 1.000.000 cm and
+.I vpre
+to 1.000 cm. For a typical GPS reciver you should set 
+.I hpre 
+to 4000
+and 
+.I vpre 
+to 10000. vpre and hpre are optional.
+.P
+.B ddns-clientd
+logs to stderr. 
+.BR multilog (8)
+is well suited for handling this.
+.P
+If you for some reason do not want to reveal your IP addresses 
+or do not have an IPv4 or IPv6 adress you can set the values
+in the commandline to 0. The server will ignore this addresses.
+.P
+If you use 0.0.0.1 as your IPv4 address
+.B ddns-clientd
+will rewrite this IP address to the IP address used for the 
+outgoing connection. 
+.P
+The location can't be left out, but you can define a location
+of the size of your city, country or the whole Earth. 
+.P
+On errors 
+.B dffingerd 
+prints out an error message to stderr and exits with a status of 111
+if the error is in the initialisation and 100 if the error is network 
+related.
+.P
+.SH EXAMPLE
+An typical invocation might look like this:
+.IP
+ddns-clientd 0.0.0.1 1234::cdef 50 57 9.7 N 6 54 08.3 E 5700 5000 1500 5000
+.P
+If you really can't figure out where you are you can try
+.IP
+ddns-clientd 1.2.3.4 0 0 0 0.0 N 0 0 0.0 E 1000 2000000000 2000000000 300000
+.SH EXAMPLE
+.B ddns-identd
+is written by Doobee R. Tzeck <drt@ailis.de>
+.SH SEE ALSO
+multilog(8),
+http://rc23.cx/ddns/

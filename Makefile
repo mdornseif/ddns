@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.15 2000/07/14 21:16:48 drt Exp $
+# $Id: Makefile,v 1.16 2000/07/14 23:57:56 drt Exp $
 
 DOWNLOADER = "wget"
 
@@ -74,13 +74,18 @@ libtai.a:
 
 djblib.a: buffer_0.o fd.h fd_copy.o fd_move.o fmt_xint.o fmt_xlong.o \
 now.o open_excl.o scan_xlong.o sig.o sig_alarm.o sig_block.o sig_catch.o \
-sig_int.o sig_term.o timeoutconn.o
+sig_int.o sig_term.o socket_delay.o socket_local.o timeoutconn.o
 	ar cr djblib.a buffer_0.o fd_copy.o fd_move.o fmt_xint.o \
 	fmt_xlong.o now.o open_excl.o scan_xlong.o sig_alarm.o sig_block.o \
-	sig_catch.o timeoutconn.o sig.o sig_int.o sig_term.o
+	sig_catch.o timeoutconn.o sig.o sig_int.o sig_term.o socket_delay.o \
+	socket_local.o
 
 drtlib.a: iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
 	ar cr drtlib.a iso2txt.o loc.o mt19937.o pad.o rijndael.o txtparse.o
+
+setup-client: ddns-cleand.
+	install -bDs ddns-client /usr/local/bin/
+	install -bDs ddns-clientd.8 /usr/local/man/man8/
 
 clean:
 	rm -f *.o ddnsd ddnsd-data ddns-clientd filedns hassgprm.h hassgact.h *.a

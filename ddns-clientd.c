@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.7 2000/07/14 15:32:51 drt Exp $
+/* $Id: ddns-clientd.c,v 1.8 2000/07/14 23:57:56 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
@@ -6,6 +6,11 @@
  * (K)opyright is Myth
  * 
  * $Log: ddns-clientd.c,v $
+ * Revision 1.8  2000/07/14 23:57:56  drt
+ * Added documentation in README and manpage for
+ * ddns-clientd, rewriting of 0.0.0.1 in ddns-cliend
+ * fixes in ddnsc.c and ddns-client.c
+ *
  * Revision 1.7  2000/07/14 15:32:51  drt
  * The timestamp is checked now in ddnsd and an error
  * is returned if there is more than 4000s fuzz.
@@ -42,6 +47,7 @@
 #include <unistd.h>    /* close, getpid, getppid */
 
 #include "buffer.h"
+#include "byte.h"
 #include "dns.h"
 #include "env.h"
 #include "error.h"
@@ -64,7 +70,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.7 2000/07/14 15:32:51 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.8 2000/07/14 23:57:56 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 
@@ -79,6 +85,8 @@ uint32 ttl = 120;
 char *serverip;
 uint32 port = 0;
 uint32 uid = 0;
+char iplocal[16];
+uint16 portlocal;
 
 static int flagexit = 0; 
 static int flagalarmed = 0;
@@ -109,41 +117,41 @@ void log_retuncode(int r)
   switch(r)
     {
     case DDNS_T_ACK: 
-      buffer_puts(buffer_1, "ACK: leasetime ");
+      buffer_puts(buffer_2, "ACK: leasetime ");
       //  XXX buffer_put(buffer_1, strnum, fmt_ulong(strnum, r.leasetime));
-      buffer_puts(buffer_1, "\n");
+      buffer_puts(buffer_2, "\n");
       break;
     case DDNS_T_NAK: 
-      buffer_puts(buffer_1, "NAK: mail drt@ailis.de\n"); 
+      buffer_puts(buffer_2, "NAK: mail drt@ailis.de\n"); 
       break;
     case DDNS_T_ESERVINT: 
-      buffer_puts(buffer_1, "EIN: internal server error\n"); 
+      buffer_puts(buffer_2, "EIN: internal server error\n"); 
       break;
     case DDNS_T_EPROTERROR: 
-      buffer_puts(buffer_1, "EPR: mail drt@ailis.de\n"); 
+      buffer_puts(buffer_2, "EPR: mail drt@ailis.de\n"); 
       break;   
     case DDNS_T_EWRONGMAGIC: 
-      buffer_puts(buffer_1, "EWM: server thinks we send him a message with bad magic\n");
+      buffer_puts(buffer_2, "EWM: server thinks we send him a message with bad magic\n");
       break;  
     case DDNS_T_ECANTDECRYPT: 
-      buffer_puts(buffer_1, "EDC: server can not decrypt our message\n"); 
+      buffer_puts(buffer_2, "EDC: server can not decrypt our message\n"); 
       break; 
     case DDNS_T_EALLREADYUSED: 
-      buffer_puts(buffer_1, "EUD: uid has already registered an ip\n"); 
+      buffer_puts(buffer_2, "EUD: uid has already registered an ip\n"); 
       break;
     case DDNS_T_EUNKNOWNUID: 
-      buffer_puts(buffer_1, "EID: uid is unknown to the server\n"); 
+      buffer_puts(buffer_2, "EID: uid is unknown to the server\n"); 
       break;  
     case DDNS_T_ENOENTRYUSED:
-	buffer_puts(buffer_1, "ENE: client requsted to renew/kill something which is not set\n");
+	buffer_puts(buffer_2, "ENE: client requsted to renew/kill something which is not set\n");
 	break;
     case DDNS_T_ETIMESWRONG: 
-      buffer_puts(buffer_1, "ETW: timestamp is wrong. Check your local clock!\n"); 
+      buffer_puts(buffer_2, "ETW: timestamp is wrong. Check your local clock!\n"); 
       break;  
     default:
       strerr_die1x(100, "unknown packet");
     }
-  buffer_flush(buffer_1);  
+  buffer_flush(buffer_2);  
 }
 
 /* basically an emebbed tcpclient */
@@ -159,7 +167,11 @@ int buildup_connection(char *ip, uint16 p)
   if (timeoutconn(s, ip, p, 120) != 0)
     strerr_die2sys(100, FATAL, "unable to connect: ");
 
-  //  socket_tcpnodelay(s); /* if it fails, bummer */
+  socket_tcpnodelay(s); /* if it fails, bummer */
+
+    /* get local ip */
+  if (socket_local4(s,iplocal,&portlocal) == -1)
+    strerr_die2sys(100, FATAL, "unable to get local address: ");
 
   if (fd_move(6,s) == -1)
     strerr_die2sys(100, FATAL,"unable to set up descriptor 6: ");
@@ -178,12 +190,25 @@ void teardown_connection()
 static int call_ddnsc(int action)
 {
   int r;
+  char strnum[FMT_ULONG];
+  char strip[IP4_FMT];
   uint32 tmpttl;
-  char   strnum[FMT_ULONG];
 
   if(!buildup_connection(serverip, port))
     strerr_die2sys(100, FATAL, "could't connect to server");
+
+  /* check if the client has requested rewriting of his ip */
+  if(byte_equal(ip4, 4, "\0\0\0\1"))
+  {
+    byte_copy(ip4, 4, iplocal);
+    buffer_puts(buffer_2, "ddns-clientd: rewriting 0.0.0.1 to ");
+    buffer_put(buffer_2, strip, ip4_fmt(strip, ip4));
+    buffer_puts(buffer_2, "\n");
+    buffer_flush(buffer_2);
+  }
+     
   r = ddnsc(action, uid, ip4, ip6, &loc, key.s, &tmpttl);
+
   teardown_connection();
 
   if((tmpttl != ttl) && (tmpttl != ttl))
