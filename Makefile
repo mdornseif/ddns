@@ -11,7 +11,7 @@ ddnsc: ddnsc.o lib/tools.a djblib/djblib.a
 ddnsd-data: ddnsd-data.o lib/tools.a djblib/djblib.a
 	gcc -o $@ $^
 
-djblib/djblib.a:
+djblib/djblib.a: 
 	cd djblib
 	make
 	cd ..

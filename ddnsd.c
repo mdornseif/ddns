@@ -1,10 +1,13 @@
-/* $Id: ddnsd.c,v 1.1 2000/04/19 07:01:46 drt Exp $
+/* $Id: ddnsd.c,v 1.2 2000/04/19 13:36:23 drt Exp $
  *
  * server for ddns
  * 
  * $Log: ddnsd.c,v $
- * Revision 1.1  2000/04/19 07:01:46  drt
- * Initial revision
+ * Revision 1.2  2000/04/19 13:36:23  drt
+ * Compile fixes
+ *
+ * Revision 1.1.1.1  2000/04/19 07:01:46  drt
+ * initial ddns version
  *
  */
 
@@ -17,7 +20,7 @@
 #include "djblib/env.h"
 #include "djblib/fmt.h"
 #include "djblib/ip4.h"
-#include "djblib/write.h"
+#include "djblib/readwrite.h"
 #include "djblib/open.h"
 #include "djblib/error.h"
 #include "djblib/strerr.h"
