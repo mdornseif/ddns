@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.13 2000/10/17 21:59:35 drt Exp $
+/* $Id: ddns-clientd.c,v 1.14 2000/11/17 02:00:41 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
@@ -8,6 +8,9 @@
  * This file is to long!
  *
  * $Log: ddns-clientd.c,v $
+ * Revision 1.14  2000/11/17 02:00:41  drt
+ * one shot mode for ddns-clientd
+ *
  * Revision 1.13  2000/10/17 21:59:35  drt
  * *** empty log message ***
  *
@@ -89,7 +92,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.13 2000/10/17 21:59:35 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.14 2000/11/17 02:00:41 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 #define ARGV0 "ddns-clientd: "
@@ -108,6 +111,7 @@ uint32 uid = 0;
 static char iplocal[16];
 static char iplocal_old[16];
 uint16 portlocal;
+enum {NONE, REGISTER, RENEW, KILL} oneshot = NONE;
 
 static int flagexit = 0; 
 static int flagalarmed = 0;
@@ -357,53 +361,118 @@ void doit(void)
   stralloc_0(&sa);
   log(sa.s);
 
-  /* register at server */
-  r = set_entry();
-  
-  if(r == DDNS_T_EALLREADYUSED)
-    {
-      // deregister and try again
-      log("warning there is already an entry. killing and reregistering");
-      sleep(1);
-      r = kill_entry();
-      log("killed");
-      sleep(1);
-      r = set_entry();
-      log("registered");
-    }
-    
-  if(r != DDNS_T_ACK)
-    {
-      // we have a problem. Print Error and exit 
-      log_retuncode(r);
-      strerr_die2x(100, FATAL, "could't register at server");
-    }
 
-  // catch SIGTERM & SIGINT
-  sig_catch(sig_term, sigterm);
-  sig_catch(sig_int, sigterm);
-  // catch SIGALRM
-  sig_catch(sig_alarm, sigalrm);
-
-  for(;;)
+  /* do special services if requested or enter our regular loop */
+  switch(oneshot)
     {
-      // sleep for ttl-17 seconds
-      sleep(ttl-17);
-      
-      if(flagexit)
+    case REGISTER:
+      stralloc_copys(&sa, "registering at server from ");
+      loc_ntoa(&loc, &sa);
+      stralloc_cats(&sa, " with ");
+      stralloc_catb(&sa, strip, ip4_fmt(strip, ip4));
+      stralloc_cats(&sa, "/");
+      stralloc_catb(&sa, strip, ip6_fmt(strip, ip6));
+      stralloc_0(&sa);
+      log(sa.s);
+
+      if(r != set_entry())
 	{
-	  // we've catched a SIGTERM	  
-	  terminate();
+	  log("an error occured");
+	  _exit(100);
 	}
+      break;
+    case RENEW:
+      stralloc_copys(&sa, "renew at server from ");
+      loc_ntoa(&loc, &sa);
+      stralloc_cats(&sa, " with ");
+      stralloc_catb(&sa, strip, ip4_fmt(strip, ip4));
+      stralloc_cats(&sa, "/");
+      stralloc_catb(&sa, strip, ip6_fmt(strip, ip6));
+      stralloc_0(&sa);
+      log(sa.s);
+
+      if(r != renew_entry())
+	{
+	  log("an error occured");
+	  _exit(100);
+	}
+      break;
+    case KILL:
+      stralloc_copys(&sa, "killing entry at server from ");
+      loc_ntoa(&loc, &sa);
+      stralloc_cats(&sa, " with ");
+      stralloc_catb(&sa, strip, ip4_fmt(strip, ip4));
+      stralloc_cats(&sa, "/");
+      stralloc_catb(&sa, strip, ip6_fmt(strip, ip6));
+      stralloc_0(&sa);
+      log(sa.s);
+
+      if(r != kill_entry())
+	{
+	  log("an error occured");
+	  _exit(100);
+	}
+      break;
+    case NONE:
+      /* nothing special, enter our mainloop */
       
-      // renew registration
-      log("renewing entry");
-      r = renew_entry();
+      stralloc_copys(&sa, "registering at server from ");
+      loc_ntoa(&loc, &sa);
+      stralloc_cats(&sa, " with ");
+      stralloc_catb(&sa, strip, ip4_fmt(strip, ip4));
+      stralloc_cats(&sa, "/");
+      stralloc_catb(&sa, strip, ip6_fmt(strip, ip6));
+      stralloc_0(&sa);
+      log(sa.s);
+      
+      /* register at server */
+      r = set_entry();
+      
+      if(r == DDNS_T_EALLREADYUSED)
+	{
+	  // deregister and try again
+	  log("warning there is already an entry. killing and reregistering");
+	  sleep(1);
+	  r = kill_entry();
+	  log("killed");
+	  sleep(1);
+	  r = set_entry();
+	  log("registered");
+	}
+
       if(r != DDNS_T_ACK)
 	{
 	  // we have a problem. Print Error and exit 
 	  log_retuncode(r);
-	  strerr_die2x(100, FATAL, "could't renew entry at server");
+	  strerr_die2x(100, FATAL, "could't register at server");
+	}
+      
+      // catch SIGTERM & SIGINT
+      sig_catch(sig_term, sigterm);
+      sig_catch(sig_int, sigterm);
+      // catch SIGALRM
+      sig_catch(sig_alarm, sigalrm);
+      
+      for(;;)
+	{
+	  // sleep for ttl-17 seconds
+	  sleep(ttl-17);
+	  
+	  if(flagexit)
+	    {
+	      // we've catched a SIGTERM	  
+	      terminate();
+	    }
+	  
+	  // renew registration
+	  log("renewing entry");
+	  r = renew_entry();
+	  if(r != DDNS_T_ACK)
+	    {
+	      // we have a problem. Print Error and exit 
+	      log_retuncode(r);
+	      strerr_die2x(100, FATAL, "could't renew entry at server");
+	    }
 	}
     }
 }
@@ -418,7 +487,7 @@ int main(int argc, char *argv[])
   stralloc fqdn = {0};
   stralloc svasa = {0};
   stralloc locsa = {0};
-
+  
   VERSIONINFO;
 
   log("starting");
@@ -430,15 +499,6 @@ int main(int argc, char *argv[])
 	 (long long) random() * 
 	 (long long) clock());
    
-  /* read configuration from commandline */
-  if(argc < 3)
-    {
-      strerr_die2x(111, FATAL, "usage: ddns-clientd IPv4 IPv6 LOCATION
-       where LOCATION is someting like `50 57 9.7 N 6 54 08.3 E 5700 5000 1500 5000'
-       which describes a location at 50\26057'9.7\" north 6\26054'8.3\" east at
-       an altitude of 5700cm with 5000cm size. This value is 1500cm acurate in 
-       horizontal and 5000cm in vertical direction. The last four values are optional.\n\n");
-    }
    
   // XXX: try to read from configfile
 
@@ -490,6 +550,30 @@ int main(int argc, char *argv[])
     strerr_die2x(111, FATAL, "server port not set (try $DDNS_SERVER_PORT)");
   scan_ulong(serverport, &port);
   
+  /* check if the user requested any special action */ 
+  if(argc > 1 && argv[1][0] == '-')
+    {
+      if(argv[1][1] == 'R')  
+	oneshot = REGISTER;
+      else if(argv[1][1] == 'W')
+	oneshot = RENEW;
+      else if(argv[1][1] == 'K')
+	oneshot = KILL;
+
+      argc--;
+      argv++;
+    }
+  
+  /* read configuration from commandline */
+  if(argc < 3)
+    {
+      strerr_die2x(111, FATAL, "usage: ddns-clientd IPv4 IPv6 LOCATION
+       where LOCATION is someting like `50 57 9.7 N 6 54 08.3 E 5700 5000 1500 5000'
+       which describes a location at 50\26057'9.7\" north 6\26054'8.3\" east at
+       an altitude of 5700cm with 5000cm size. This value is 1500cm acurate in 
+       horizontal and 5000cm in vertical direction. The last four values are optional.\n\n");
+    }
+
   ip4_scan(argv[1], ip4);
   ip6_scan(argv[2], ip6); 
    
@@ -505,10 +589,11 @@ int main(int argc, char *argv[])
   
   if(!loc_aton(locsa.s, &loc))
     strerr_die3x(111, FATAL, "can't find a LOCation in ", locsa.s);
-    
+  
   /* all there now, here we go */ 
-  doit();
+  doit();      
 
-  return 0;
+  /* we should NEVER reach here, but keep gcc from complaining */
+  return 222;
 }
 

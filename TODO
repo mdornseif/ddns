@@ -13,11 +13,10 @@ CLEANUPS
   ddnsd-conf.8 filedns-conf.8 ddns-cleand.conf.8 ddns-ipfwo-conf.8
 
 FEATURES
-* ddns-clientd: one shot mode
 * ddns-ipfwo: read whole database at startup
 * add hostname to s-record
 * ddns-cleand: ddns-pipe(5)
-* wrong packetsize
+* wrong packetsize intepretation
 
 ***
 0.02 "rage"

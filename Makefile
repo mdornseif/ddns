@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.25 2000/10/06 22:01:43 drt Exp $
+# $Id: Makefile,v 1.26 2000/11/17 02:00:41 drt Exp $
 #  --drt@ailis.de
 
 VERSION=\"preAlpha4\"
@@ -37,7 +37,7 @@ ddnsd-conf: ddnsd-conf.o generic-conf.o auto_home.o djblib.a
 ddnsd-data: djblib.a ddnsd-data.o drtlib.a  
 	$(CC) $(CFLAGS) -o $@ ddnsd-data.o drtlib.a djblib.a 
 
-ddns-cleand: djblib.a ddns.h ddns-cleand.o djblib.a drtlib.a
+ddns-cleand: djblib.a ddns.h ddns-cleand.o djblib.a drtlib.a ddnsd_fifo.c
 	$(CC) $(CFLAGS) -o $@ ddns-cleand.o drtlib.a djblib.a  
 
 ddns-cleand-conf: djblib.a ddns-cleand-conf.o generic-conf.o auto_home.o
