@@ -1,4 +1,4 @@
-/* $Id: ddns-ipfwo-conf.c,v 1.1 2000/07/31 19:03:17 drt Exp $
+/* $Id: ddns-ipfwo-conf.c,v 1.2 2000/10/06 13:54:24 drt Exp $
  *  --drt@ailis.de
  *
  * create directory structure for using ddnsd-aclwriter with svscan
@@ -8,6 +8,9 @@
  * I do not belive there is a thing like copyright.
  *
  * $Log: ddns-ipfwo-conf.c,v $
+ * Revision 1.2  2000/10/06 13:54:24  drt
+ * fixed missing newline
+ *
  * Revision 1.1  2000/07/31 19:03:17  drt
  * initial revision
  *
@@ -20,7 +23,7 @@
 #include "auto_home.h"
 #include "generic-conf.h"
 
-static char rcsid[] = "$Id: ddns-ipfwo-conf.c,v 1.1 2000/07/31 19:03:17 drt Exp $";
+static char rcsid[] = "$Id: ddns-ipfwo-conf.c,v 1.2 2000/10/06 13:54:24 drt Exp $";
 
 #define FATAL "ddns-ipfwo-conf: fatal: "
 
@@ -62,8 +65,9 @@ int main(int argc, char **argv)
   start("run");
   outs("#!/bin/sh\nexec 2>&1\n");
   outs("WORKDIR="); outs(datadir); outs("; export WORKDIR\n");
-  outs("exec softlimit -d10000000");
-  outs(" "); outs(auto_home); outs("/bin/ddns-ipfwo\n");
+  outs("exec softlimit -d10000000 \\\n");
+  outs("envuidgid "); outs(user);
+  outs(" \\\n"); outs(auto_home); outs("/bin/ddns-ipfwo\n");
   finish();
   perm(0755);
 
