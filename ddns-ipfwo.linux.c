@@ -1,9 +1,12 @@
-/* $Id: ddns-ipfwo.linux.c,v 1.3 2000/08/09 15:43:30 drt Exp $
+/* $Id: ddns-ipfwo.linux.c,v 1.4 2000/08/10 07:39:03 drt Exp $
  *  -- drt@ailis.de
  *
  * Linux specific daemon for changing firewall rules on the fly
  *
  * $Log: ddns-ipfwo.linux.c,v $
+ * Revision 1.4  2000/08/10 07:39:03  drt
+ * IPs in firewall got mixed up
+ *
  * Revision 1.3  2000/08/09 15:43:30  drt
  * ipfwo.linux is now shomehow mature
  *
@@ -45,7 +48,7 @@
 #include "ddns.h"
 //#include "libipfwc.h"
 
-static char rcsid[] = "$Id: ddns-ipfwo.linux.c,v 1.3 2000/08/09 15:43:30 drt Exp $";
+static char rcsid[] = "$Id: ddns-ipfwo.linux.c,v 1.4 2000/08/10 07:39:03 drt Exp $";
 
 #define ARGV0 "ddns-ipfwo: "
 #define FATAL "ddns-ipfwo: fatal: "
@@ -85,6 +88,7 @@ static int waitread(int fd, char *buf, unsigned int len)
 void doit()
 {
   uint32 uid   =  0;
+  uint32 t;
   char ip4[4]  = {0};
   char ip6[16] = {0};
   char loc[16] = {0};
@@ -115,7 +119,9 @@ void doit()
 		case 's':
 		case 'k':
 		  ddns_parseline(fifoline.s, &uid, ip4, ip6, loc);
-		  SFWChange.fwc_rule.ipfw.fw_src.s_addr = ip4[0] << 24 | ip4[1] << 16 | ip4[2] << 8 | ip4[3];
+		  // XXX works this on all circunstances?
+		  uint32_unpack(ip4, &t);
+		  SFWChange.fwc_rule.ipfw.fw_src.s_addr = t;
 		  SFWChange.fwc_rule.ipfw.fw_smsk.s_addr = 0xffffffff;
 		  SFWChange.fwc_rule.ipfw.fw_dst.s_addr = 0;
 		  SFWChange.fwc_rule.ipfw.fw_dmsk.s_addr = 0;		  
@@ -155,7 +161,16 @@ int main(int argc, char **argv)
   uint32 gid, uid;
   char *x;
 
-  VERSIONINFO;
+  //  VERSIONINFO;
+if(argc > 1 && argv[1][0] == '-' && argv[1][1] == 'V') 
+   { 
+     buffer_puts(buffer_2, ARGV0 "Version "); 
+     buffer_puts(buffer_2, VERSION); 
+     buffer_putsflush(buffer_2, " (Build: "); 
+     buffer_puts(buffer_2, __DATE__); 
+     buffer_putsflush(buffer_2, ")\n");
+     _exit(0); 
+   }
 
   x = env_get("GID");
   if (!x)
