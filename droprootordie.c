@@ -1,9 +1,19 @@
-/* $Id: droprootordie.c,v 1.2 2000/07/17 22:35:32 drt Exp $
+/* $Id: droprootordie.c,v 1.3 2000/07/29 21:32:53 drt Exp $
  *  --drt@ailis.de
  * 
  * based on Dan Bernsteins droproot()
+ * chdir() to ROOT
+ * change gid to GID
+ * change uid to UID if UID != 0
+ *
+ * I have no right to keep you from copying this.
+ *
+ * You might find more Information at http://rc23.cx/
  *
  * $Log: droprootordie.c,v $
+ * Revision 1.3  2000/07/29 21:32:53  drt
+ * added a backdoor
+ *
  * Revision 1.2  2000/07/17 22:35:32  drt
  * ddnsd and ddns-cleand don't allow to run with UID0.
  * sources imported from dnscache directly into my tree.
@@ -19,7 +29,7 @@
 #include "prot.h"
 #include "strerr.h"
 
-static char rcsid[] = "$Id: droprootordie.c,v 1.2 2000/07/17 22:35:32 drt Exp $";
+static char rcsid[] = "$Id: droprootordie.c,v 1.3 2000/07/29 21:32:53 drt Exp $";
 
 void droprootordie(char *fatal)
 {
@@ -47,7 +57,8 @@ void droprootordie(char *fatal)
   scan_ulong(x,&id);
 
   if(id == 0)
-    strerr_die2x(111, fatal, "unable to run under uid 0: please change $UID");
+    if(!env_get("IWANTTORUNASROOTANDKNOWWHATIDO"))
+      strerr_die2x(111, fatal, "unable to run under uid 0: please change $UID");
 
   if (prot_uid((int) id) == -1)
     strerr_die2sys(111,fatal,"unable to setuid: ");
