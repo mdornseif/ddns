@@ -1,24 +1,27 @@
-* clean up sourcecode
-* clean up log/error messages
-* write manpages
-* create an action daemon
-* check for changed IP while renewing
-* chech usage of bufered I/O
-* use timeout for all calls which could block forever. (NFS stuff etc.)
-* a way to lock entrys
-* unify the parsing of dnsfiles in filedns and ddns-cleand
-* support for round-robbin dns of the server ip in ddns-clientd
-* support for ipv6 as a transport in ddns-clientd, ddnsd and filedns
+* check usage of bufered I/O
+* do not create entrys for 0 adresses in ddnsd
+* ddnsd: check timestamps 
+* retry connection to server in client
 * automatic ip-determination/checking in ddns-clientd
 * defaults in ddns-clientd
+* make ddns-clientd commandline more flexible
+* clean up sig.*
+* clean up loc.*
+* unify the parsing of dnsfiles in filedns and ddns-cleand
+* clean up sourcecode
+* clean up log/error messages
+* create an action daemon
+* check for changed IP while renewing
+* use timeout for all calls which could block forever. (NFS stuff etc.)
+* a way to lock entrys
+* SOA handling in filedns
+* support for round-robbin dns of the server ip in ddns-clientd
+* support for ipv6 as a transport in ddns-clientd, ddnsd and filedns
 * check behaviour under error-conditions
 * clean up Makefile
 * install scripts
 * README
-* SOA handling in filedns
+* write manpages
 * get compatible with classical make instead of gmake
 * -Wall
-* make ddns-clientd commandline more flexible
-* cleanup sig.*
-* retry connection to server in client
-* handling of ttl in ddens-clientd
+* fix ddns-cleand

@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.5 2000/07/13 18:20:47 drt Exp $
+/* $Id: ddns-clientd.c,v 1.6 2000/07/14 14:07:51 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
@@ -6,6 +6,10 @@
  * (K)opyright is Myth
  * 
  * $Log: ddns-clientd.c,v $
+ * Revision 1.6  2000/07/14 14:07:51  drt
+ * ddns-clientd now handles changes of ttl by
+ * the server and logs ttl.
+ *
  * Revision 1.5  2000/07/13 18:20:47  drt
  * everything supports now DNS LOC
  *
@@ -37,6 +41,7 @@
 #include "env.h"
 #include "error.h"
 #include "fd.h"
+#include "fmt.h"
 #include "ip4.h"
 #include "ip6.h"
 #include "scan.h"
@@ -54,7 +59,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.5 2000/07/13 18:20:47 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.6 2000/07/14 14:07:51 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 
@@ -65,7 +70,7 @@ char ip4[IP4_FMT];
 char ip6[IP6_FMT];
 struct loc_s loc;
 stralloc key = {0};
-uint32 ttl = 30; 
+uint32 ttl = 120; 
 char *serverip;
 uint32 port = 0;
 uint32 uid = 0;
@@ -85,7 +90,7 @@ void sigalrm() { flagalarmed++; }
 /* log an informational message to stderr */
 void log(char *s)
 {
-  buffer_puts(buffer_2, "dmail-clientd: ");
+  buffer_puts(buffer_2, "ddns-clientd: ");
   buffer_puts(buffer_2, s);
   buffer_puts(buffer_2, "\n");
   buffer_flush(buffer_2);
@@ -100,7 +105,7 @@ void log_retuncode(int r)
     {
     case DDNS_T_ACK: 
       buffer_puts(buffer_1, "ACK: leasetime ");
-      //  buffer_put(buffer_1, strnum, fmt_ulong(strnum, r.leasetime));
+      //  XXX buffer_put(buffer_1, strnum, fmt_ulong(strnum, r.leasetime));
       buffer_puts(buffer_1, "\n");
       break;
     case DDNS_T_NAK: 
@@ -168,12 +173,22 @@ void teardown_connection()
 static int call_ddnsc(int action)
 {
   int r;
+  uint32 tmpttl;
+  char   strnum[FMT_ULONG];
 
   if(!buildup_connection(serverip, port))
     strerr_die2sys(100, FATAL, "could't connect to server");
-  r = ddnsc(action, uid, ip4, ip6, &loc, key.s, &ttl);
+  r = ddnsc(action, uid, ip4, ip6, &loc, key.s, &tmpttl);
   teardown_connection();
 
+  if((tmpttl != ttl) && (tmpttl != ttl))
+    {
+      ttl = tmpttl;
+      buffer_puts(buffer_2, "ddns-clientd: changing leasetime to ");
+      buffer_put(buffer_2, strnum, fmt_ulong(strnum, ttl));
+      buffer_puts(buffer_2, "\n");
+      buffer_flush(buffer_2);
+    }
   return r;
 }
 
