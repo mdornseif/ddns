@@ -1,8 +1,11 @@
-/* $Id: ddnsd.c,v 1.14 2000/07/12 11:46:01 drt Exp $
+/* $Id: ddnsd.c,v 1.15 2000/07/13 18:20:47 drt Exp $
  *
  * server for ddns - this file is to long
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.15  2000/07/13 18:20:47  drt
+ * everything supports now DNS LOC
+ *
  * Revision 1.14  2000/07/12 11:46:01  drt
  * checking of random1 == random2 to keep
  * a attacker from exchanging single blocks
@@ -86,10 +89,11 @@
 
 #include "mt19937.h"
 #include "rijndael.h"
+#include "iso2txt.h"
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.14 2000/07/12 11:46:01 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.15 2000/07/13 18:20:47 drt Exp $";
 
 static char *datadir;
 
@@ -142,6 +146,7 @@ void ddnsd_log(uint32 uid, char *str)
   char strnum[FMT_ULONG];
   
   /* Do logging */
+  buffer_puts(buffer_2, "ddnsd ");
   buffer_puts(buffer_2, remotehost);
   buffer_puts(buffer_2, " [");
   buffer_puts(buffer_2, remoteip);  
@@ -174,7 +179,8 @@ void ddnsd_send_err(uint32 uid, uint16 errtype, char *errstr)
   exit(111);
 }
 
-/* sends an error packet to the client and logs an error including a system error message */ 
+/* sends an error packet to the client and logs an error 
+   including a system error message */ 
 void ddnsd_send_err_sys(uint32 uid, char *errstr)
 {
   stralloc err = {0};
@@ -331,10 +337,10 @@ int ddnsd_recive(struct ddnsrequest *p)
       uint32_unpack((char*) &ptmp.loc_lat, &p->loc_lat);
       uint32_unpack((char*) &ptmp.loc_long, &p->loc_long);
       uint32_unpack((char*) &ptmp.loc_alt, &p->loc_alt);
-      /* this are bytes which don't net conversation */
-      ptmp.loc_size = p->loc_size;
-      ptmp.loc_vpre = p->loc_hpre;
-      ptmp.loc_hpre = p->loc_vpre;
+      /* this are bytes which don't need conversation */
+      p->loc_size = ptmp.loc_size;
+      p->loc_hpre = ptmp.loc_vpre;
+      p->loc_vpre = ptmp.loc_hpre;
       
       /* check for the right magic */
       if(p->magic != DDNS_MAGIC)
@@ -374,12 +380,14 @@ void ddnsd_setentry( struct ddnsrequest *p)
   char host[64] = {0};
   int loop = 0;
   int fd = 0;
+  stralloc sa = {0};
   stralloc tmpname = {0};
   stralloc err = {0};
   stralloc finname = {0};
   char outbuf[BUFFER_OUTSIZE];
   char strnum[FMT_ULONG];
   char strip[IP6_FMT];
+  char tb[16];
   buffer ssout;
   
   /* create a temporary name */
@@ -422,16 +430,30 @@ void ddnsd_setentry( struct ddnsrequest *p)
   /* ip4 */
   buffer_puts(&ssout, "=,");
   buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip4));
-  buffer_puts(&ssout, ",0x");
-  buffer_put(&ssout, strnum, fmt_xlong(strnum, p->uid));
+  buffer_puts(&ssout, ",");
+  buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
   buffer_puts(&ssout, "\n");
   /* ip6 */
   buffer_puts(&ssout, "6,");
   buffer_put(&ssout, strip, ip6_fmt(strip, (char *) &p->ip6));
-  buffer_puts(&ssout, ",0x");
-  buffer_put(&ssout, strnum, fmt_xlong(strnum, p->uid));
+  buffer_puts(&ssout, ",");
+  buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
   buffer_puts(&ssout, "\n");
-  /* XXX: LOC is missing */
+  /* LOC */
+  buffer_puts(&ssout, "L,");
+  tb[0] = 0;
+  tb[1] = p->loc_size;
+  /* XXX: something is mixed up here, fixme */
+  tb[3] = p->loc_hpre;
+  tb[2] = p->loc_vpre;
+  uint32_pack_big(&tb[4], p->loc_lat); 
+  uint32_pack_big(&tb[8], p->loc_long); 
+  uint32_pack_big(&tb[12], p->loc_alt);  
+  iso2txt(tb, 16, &sa);
+  buffer_put(&ssout, sa.s, sa.len);
+  buffer_puts(&ssout, ",");
+  buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
+  buffer_puts(&ssout, "\n");
   buffer_flush(&ssout); 
   
   close(fd);

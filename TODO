@@ -1,9 +1,7 @@
 * clean up sourcecode
-* ipv6 support in filedns
 * clean up log/error messages
 * write manpages
 * create an action daemon
-* ddnsd, filedns: real handling of LOC
 * check for changed IP while renewing
 * chech usage of bufered I/O
 * use timeout for all calls which could block forever. (NFS stuff etc.)
@@ -11,13 +9,16 @@
 * unify the parsing of dnsfiles in filedns and ddns-cleand
 * support for round-robbin dns of the server ip in ddns-clientd
 * support for ipv6 as a transport in ddns-clientd, ddnsd and filedns
-* better logging in ddns-clientd
-* automatic ip-determination in ddns-clientd
+* automatic ip-determination/checking in ddns-clientd
 * defaults in ddns-clientd
 * check behaviour under error-conditions
-* cleaner usage of djbs tools
 * clean up Makefile
 * install scripts
 * README
 * SOA handling in filedns
-
+* get compatible with classical make instead of gmake
+* -Wall
+* make ddns-clientd commandline more flexible
+* cleanup sig.*
+* retry connection to server in client
+* handling of ttl in ddens-clientd

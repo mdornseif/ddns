@@ -1,8 +1,11 @@
-/* $Id: filedns.c,v 1.2 2000/07/07 23:51:38 drt Exp $
+/* $Id: filedns.c,v 1.3 2000/07/13 18:20:47 drt Exp $
  *
  * dnsserver serving from the filesystem
  * 
  * $Log: filedns.c,v $
+ * Revision 1.3  2000/07/13 18:20:47  drt
+ * everything supports now DNS LOC
+ *
  * Revision 1.2  2000/07/07 23:51:38  drt
  * nearly everything works now, ddns is in a somehow usable state now.
  *
@@ -28,8 +31,9 @@
 #include "response.h"
 #include "stralloc.h"
 #include "strerr.h"
+#include "txtparse.h"
 
-static char rcsid[] = "$Id: filedns.c,v 1.2 2000/07/07 23:51:38 drt Exp $";
+static char rcsid[] = "$Id: filedns.c,v 1.3 2000/07/13 18:20:47 drt Exp $";
 
 /* This is missing in DJBs headers, fefe should add it to libdjb (and strerr_warnXsys) */
 #define DNS_T_LOC "\0\35"
@@ -122,10 +126,8 @@ int respond(char *q, char qtype[2])
   
   buffer_init(&b, read, fd, bspace, sizeof bspace);
 
-  /* Work through the file and handout the data.
-     XXX: At the moment we just don't care what querytype the user 
-     asked for assuming an any QUERY */
-  while(match) 
+  /* Work through the file and handout the data. */
+   while(match) 
     {
       ++linenum;
       if(getln(&b, &line, &match, '\n') == -1)
@@ -149,9 +151,9 @@ int respond(char *q, char qtype[2])
       /* IPv4 */
       if(line.s[0] == '=')
 	{
-	  ip4_scan(&line.s[2], ip);
 	  if (flaga) 
 	    {
+	      ip4_scan(&line.s[2], ip);
 	      data++;
 	      /* put type and ttl (60s) */
 	      if (!response_rstart(q, DNS_T_A, "\0\0\0\74")) return 0;
@@ -165,9 +167,9 @@ int respond(char *q, char qtype[2])
       /* IPv6 */
       if(line.s[0] == '6')
 	{
-	  ip6_scan(&line.s[2], ip);
 	  if (flagaaaa) 
 	    {
+	      ip6_scan(&line.s[2], ip);
 	      data++;
 	      /* put type and ttl (60s) */
 	      if (!response_rstart(q, DNS_T_AAAA, "\0\0\0\74")) return 0;
@@ -177,9 +179,28 @@ int respond(char *q, char qtype[2])
 	      response_rfinish(RESPONSE_ANSWER);
 	    }
 	}
-      /* XXX: LOC is missing */
+      /* LOC */
+      if(line.s[0] == 'L')
+	{
+	  if (flagloc) 
+	    {
+	      txtparse(&line);
+	      if(line.s <= 20)
+		{		
+		  buffer_puts(buffer_2, "filedns: warning: LOC record seems to short\n");
+		  buffer_flush(buffer_2);
+		}
+	      data++;
+	      /* put type and ttl (60s) */
+	      if (!response_rstart(q, DNS_T_LOC, "\0\0\0\74")) return 0;
+	      /* put ip */
+	      if (!response_addbytes(&line.s[2], 16)) return 0;
+	      /* record finished */
+	      response_rfinish(RESPONSE_ANSWER);
+	    }
+	}
     }
-
+  
   /* Disclaimer ;-) */
   if (!response_rstart(q, DNS_T_TXT, "\0\0\0\74")) return 0;
   if (!response_addbytes("this is a response from an alpha quality dns-server", 51)) return 0;

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 2000/07/13 14:16:27 drt Exp $
+# $Id: Makefile,v 1.14 2000/07/13 18:20:47 drt Exp $
 
 DOWNLOADER = "wget"
 
@@ -12,7 +12,8 @@ daemon: libs ddnsd ddnsd-data ddns-cleand filedns
 
 client: libs ddns-clientd
 
-ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o rijndael.o mt19937.o dnscache.a libtai.a 
+ddnsd: ddnsd.o fmt_xint.o fmt_xlong.o open_excl.o now.o rijndael.o \
+iso2txt.o mt19937.o dnscache.a libtai.a 
 	gcc -o $@ $^
 
 ddns-cleand: ddns-cleand.o scan_xlong.o \
@@ -26,7 +27,7 @@ sig.o sig_catch.o sig_block.o sig_term.o sig_alarm.o fd_move.o fd_copy.o timeout
 ddnsd-data: ddnsd-data.o buffer_0.o rijndael.o pad.o txtparse.o dnscache.a libtai.a
 	gcc -o $@ $^
 
-filedns: filedns.o server.o dnscache.a libtai.a
+filedns: filedns.o server.o txtparse.o dnscache.a libtai.a
 	gcc -o $@ $^
 
 sig_block.o: sig_block.c hassgprm.h

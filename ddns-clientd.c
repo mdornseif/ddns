@@ -1,4 +1,4 @@
-/* $Id: ddns-clientd.c,v 1.4 2000/07/13 14:16:27 drt Exp $
+/* $Id: ddns-clientd.c,v 1.5 2000/07/13 18:20:47 drt Exp $
  *  -- drt@ailis.de
  * 
  * client for ddns
@@ -6,6 +6,9 @@
  * (K)opyright is Myth
  * 
  * $Log: ddns-clientd.c,v $
+ * Revision 1.5  2000/07/13 18:20:47  drt
+ * everything supports now DNS LOC
+ *
  * Revision 1.4  2000/07/13 14:16:27  drt
  * more logging in ddns-clientd and catching SIGINT
  *
@@ -51,7 +54,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-clientd.c,v 1.4 2000/07/13 14:16:27 drt Exp $";
+static char rcsid[] = "$Id: ddns-clientd.c,v 1.5 2000/07/13 18:20:47 drt Exp $";
 
 #define FATAL "ddns-clientd: fatal: "
 
@@ -212,9 +215,20 @@ static int terminate()
 void doit(void)
 {
   int r;
+  char strip[IP6_FMT];
+  stralloc sa = {0};
+
+  stralloc_copys(&sa, "registering at server from ");
+  loc_ntoa(&loc, &sa);
+  stralloc_cats(&sa, " with ");
+  stralloc_catb(&sa, strip, ip4_fmt(strip, ip4));
+  stralloc_cats(&sa, "/");
+  stralloc_catb(&sa, strip, ip6_fmt(strip, ip6));
+  stralloc_cats(&sa, "\n");  
+  stralloc_0(&sa);
+  log(sa.s);
 
   /* register at server */
-  log("registering at server");
   r = set_entry();
   
   if(r == DDNS_T_EALLREADYUSED)

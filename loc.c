@@ -1,4 +1,4 @@
-/* $Id: loc.c,v 1.3 2000/07/12 11:34:25 drt Exp $
+/* $Id: loc.c,v 1.4 2000/07/13 18:20:47 drt Exp $
  *  -- drt@ailis.de
  * 
  * handling of LOC data 
@@ -14,6 +14,9 @@
  * seconds - how baroqe!
  * 
  * $Log: loc.c,v $
+ * Revision 1.4  2000/07/13 18:20:47  drt
+ * everything supports now DNS LOC
+ *
  * Revision 1.3  2000/07/12 11:34:25  drt
  * ddns-clientd handels now everything itself.
  * ddnsc is now linked to ddnsd-clientd, do a
@@ -31,7 +34,7 @@
  *
  */
 
-static char rcsid[] = "$Id: loc.c,v 1.3 2000/07/12 11:34:25 drt Exp $";
+static char rcsid[] = "$Id: loc.c,v 1.4 2000/07/13 18:20:47 drt Exp $";
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -343,14 +346,13 @@ char *loc_ntoa(struct loc_s *loc, stralloc *sa)
   altval = altval * altsign;
 
   stralloc_readyplus(sa, 123);
-  snprintf(&sa->s[sa->len], 128,
+  sa->len += snprintf(&sa->s[sa->len], 128,
 	  "%d %.2d %.2d.%.3d %c %d %.2d %.2d.%.3d %c %d %d %d %d",
 	  latdeg, latmin, latsec, latsecfrac, northsouth,
 	  longdeg, longmin, longsec, longsecfrac, eastwest,
 	  altval, precsize_eton(loc->size), 
 	  precsize_eton(loc->hpre), precsize_eton(loc->vpre));
  
-  
   return (sa->s);
 }
 

@@ -37,3 +37,7 @@ Welcome to the exciting world of dynamic dns!
 ... more to follow
 
 drt@ailis.de
+
+PLATFORMS
+freebsd-4.0-release-:i386-:-:-:-
+linux-2.2.14-:i386-:-:genuineintel-0000052c-000001bf-:-
