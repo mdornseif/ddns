@@ -1,321 +1,352 @@
-/* $Id: loc.c,v 1.1 2000/07/11 15:27:24 drt Exp $
+/* $Id: loc.c,v 1.2 2000/07/11 19:54:58 drt Exp $
+ *  -- drt@ailis.de
  * 
  * handling of LOC data 
  * see:
  *
- * Davis, et al
- * RFC 1876           
- * Location Information in the DNS       
- * January 1996
+ * Davis, et al: RfC 1876 - Location Information in the DNS, January 1996
  *
+ * (K)opyright is Myth
+ *
+ * This needs a major overhaul.
+ * stdio shouldn't be used, the code is not really clean and I would prefer
+ * using decimal degrees instead of degrees, minutes and 
+ * seconds - how baroqe!
+ * 
  * $Log: loc.c,v $
+ * Revision 1.2  2000/07/11 19:54:58  drt
+ * I have thrown away my own LOC parser and used the one from
+ * RfC 1876. Changed it to use strallocs and a structure and
+ * work with centimeters instead of meters. Not elegant but it
+ * works (somehow) and is compatible to bind.
+ *
  * Revision 1.1  2000/07/11 15:27:24  drt
  * this is boken. gnarf
  *
  */
 
-/* TODO: runden, werte mit fuehrender 0 (vpre) */
+static char rcsid[] = "$Id: loc.c,v 1.2 2000/07/11 19:54:58 drt Exp $";
 
-static char rcsid[] = "$Id: loc.c,v 1.1 2000/07/11 15:27:24 drt Exp $";
+#include <sys/types.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <malloc.h>
 
 #include "uint32.h"
 #include "stralloc.h"
 #include "fmt.h"
 
-struct dnsloc {
-  unsigned char version;
-  unsigned char size;
-  unsigned char hpre;
-  unsigned char vpre;
-  uint32 latitude;
-  uint32 longitude;
-  uint32 altitude;
-};
+#include "loc.h"
 
-static char *cp; /* global char pointer modified everywhere arround */
+/* from RfC 1876: Appendix A: Sample Conversion Routines
+ *
+ * routines to convert between on-the-wire RR format and zone file
+ * format.  Does not contain conversion to/from decimal degrees;
+ * divide or multiply by 60*60*1000 for that.
+ */
 
-/* convert string to int, stop at `stop'
-   and disallow values > max, aton() light */
-static int get_num(char stop, int max)
+static unsigned int poweroften[10] = {1, 10, 100, 1000, 10000, 100000,
+                                 1000000,10000000,100000000,1000000000};
+
+/* takes an XeY precision/size value, returns a integer.*/
+static u_int32_t precsize_eton(u_int8_t prec)
 {
-  int deg;
-
-  for(deg = 0; *cp != stop; cp++)
-    {
-      if((*cp == '\0') 
-	 || (*cp > '9') 
-	 || (*cp < '0'))
-	return -1;
-      
-      deg = deg * 10;
-      deg += (int) (*cp - '0');
-      
-      if(deg >= max) return -1;
-    }
+  int mantissa, exponent;
   
-  return deg;
-}
-
-/* convert string to int, stop at `stop', fill to 10**size length
-   and disallow values > max, aton() light */
-static int get_numl(char stop, int max, unsigned int size)
-{
-  int degparts;
-  int i;
- 
-  for(degparts = 0, i = 0; *cp != ' '; cp++, i++)
-    {
-      if((*cp == '\0') 
-	 || (*cp > '9') 
-	 || (*cp < '0'))
-	return -1;
-      
-      degparts = degparts * 10;
-      degparts += (int) (*cp - '0');
-      
-      if(degparts > max) 
-	return -1;
-    }
-
-  degparts *= 10*(size-i);
+  mantissa = (int)((prec >> 4) & 0x0f) % 10;
+  exponent = (int)((prec >> 0) & 0x0f) % 10;
   
-  return degparts;
+  return mantissa * poweroften[exponent];
 }
 
-/* convert an integer to the DNS LOC exponential format 
-
-From RfC 1871:
-
-             [...] expressed as a pair of four-bit unsigned
-             integers, each ranging from zero to nine, with the most
-             significant four bits representing the base and the second
-             number representing the power of ten by which to multiply
-             the base.  This allows sizes from 0e0 (<1cm) to 9e9
-             (90,000km) to be expressed.  This representation was chosen
-             such that the hexadecimal representation can be read by
-             eye; 0x15 = 1e5.  Four-bit values greater than 9 are
-             undefined, as are values with a base of zero and a non-zero
-             exponent.
-*/
-
-/* XXX: we are allways rounding down */
-unsigned int ntolocexp(unsigned int val)
+/* converts ascii size to 0xXY. moves pointer.*/
+static u_int8_t precsize_aton(char **strptr)
 {
-  int i;
-  int exp = 1000000000;
+  unsigned int val = 0;
+  u_int8_t retval = 0;
+  register char *cp;
+  register int exponent;
+  register int mantissa;
+  
+  cp = *strptr;
+  
+  while (isdigit(*cp))
+    val = val * 10 + (*cp++ - '0');
+   
+  for (exponent = 0; exponent < 9; exponent++)
+    if (val < poweroften[exponent+1])
+      break;
+  
+  mantissa = val / poweroften[exponent];
+  if (mantissa > 9)
+    mantissa = 9;
+  
+  retval = (mantissa << 4) | exponent;
+  
+  *strptr = cp;
+  
+  return (retval);
+}
 
-  for(i = 9; i >= 0; i--)
-    {
-      if((val / exp) > 0)
-	break;
-      exp = exp / 10;
+/* converts ascii lat/lon to unsigned encoded 32-bit number.
+ *  moves pointer. */
+static uint32 latlon2ul(char **latlonstrptr, int* which)
+{
+  register char *cp;
+  int32_t retval;
+  int deg = 0, min = 0, secs = 0, secsfrac = 0;
+  
+  cp = *latlonstrptr;
+  
+  while (isdigit(*cp))
+    deg = deg * 10 + (*cp++ - '0');
+  
+  while (isspace(*cp))
+    cp++;
+  
+  if (!(isdigit(*cp)))
+    goto fndhemi;
+  
+  while (isdigit(*cp))
+    min = min * 10 + (*cp++ - '0');
+  
+  while (isspace(*cp))
+    cp++;
+  
+  if (!(isdigit(*cp)))
+    goto fndhemi;
+  
+  while (isdigit(*cp))
+    secs = secs * 10 + (*cp++ - '0');
+  
+  if (*cp == '.') {               /* decimal seconds */
+    cp++;
+    if (isdigit(*cp)) {
+      secsfrac = (*cp++ - '0') * 100;
+      if (isdigit(*cp)) {
+	secsfrac += (*cp++ - '0') * 10;
+	if (isdigit(*cp)) {
+	  secsfrac += (*cp++ - '0');
+	}
+      }
     }
-
-  return ((val/exp)<<4) | i;
+  }
+  
+  while (!isspace(*cp))   /* if any trailing garbage */
+    cp++;
+  
+  while (isspace(*cp))
+    cp++;
+  
+ fndhemi:
+  switch (*cp) {
+  case 'N': case 'n':
+  case 'E': case 'e':
+    retval = ((unsigned)1<<31)
+      + (((((deg * 60) + min) * 60) + secs) * 1000)
+      + secsfrac;
+    break;
+  case 'S': case 's':
+  case 'W': case 'w':
+    retval = ((unsigned)1<<31)
+      - (((((deg * 60) + min) * 60) + secs) * 1000)
+      - secsfrac;
+    break;
+  default:
+    retval = 0;     /* invalid value -- indicates error */
+    break;
+  }
+  
+  switch (*cp) {
+  case 'N': case 'n':
+  case 'S': case 's':
+    *which = 1;     /* latitude */
+    break;
+  case 'E': case 'e':
+  case 'W': case 'w':
+    *which = 2;     /* longitude */
+    break;
+  default:
+    *which = 0;     /* error */
+    break;
+  }
+  
+  cp++;                   /* skip the hemisphere */
+  
+  while (!isspace(*cp))   /* if any trailing garbage */
+    cp++;
+  
+  while (isspace(*cp))    /* move to next field */
+    cp++;
+  
+  *latlonstrptr = cp;
+  
+  return (retval);
 }
 
-/* skip guess what */
-int skip_spaces()
+/* converts a zone file representation in a string to an RDATA
+ * on-the-wire representation. */
+uint32 loc_aton(const char *ascii, struct loc_s *loc)
 {
-  if(*cp == '\0')
+  const char *cp, *maxcp;
+  
+  int32_t latit = 0, longit = 0, alt = 0;
+  int32_t lltemp1 = 0, lltemp2 = 0;
+  int altmeters = 0, altsign = 1;
+  u_int8_t hp = 0x16;    /* default = 1e6 cm = 10000.00m = 10km */
+  u_int8_t vp = 0x13;    /* default = 1e3 cm = 10.00m */
+  u_int8_t siz = 0x12;   /* default = 1e2 cm = 1.00m */
+  int which1 = 0, which2 = 0;
+  
+  cp = ascii;
+  maxcp = cp + strlen(ascii);
+  
+  lltemp1 = latlon2ul(&cp, &which1);
+  lltemp2 = latlon2ul(&cp, &which2);
+
+  switch (which1 + which2) {
+  case 3:                 /* 1 + 2, the only valid combination */
+    if ((which1 == 1) && (which2 == 2)) { /* normal case */
+      latit = lltemp1;
+      longit = lltemp2;
+    } else if ((which1 == 2) && (which2 == 1)) {/*reversed*/
+      longit = lltemp1;
+      latit = lltemp2;
+    } else {        /* some kind of brokenness */
+      return 0;
+    }
+    break;
+  default:                /* we didn't get one of each */
     return 0;
-
-  while(*cp == ' ')
-    {
-      if(*cp == '\0')
-	return 0;
-      cp++;
-    }
-
-  return 1;
-}
-
-/* convert an ascii representation to struct dnsloc
-   the ascii string has to be:
-
-   12.3456896 N 34.567 W [alt [size [hpre [vpre]]]]
-
-   alt, size, hpre and vpre are optional and must be measured
-   in centimeters. 
-
-   returns 0 on success, -1 on error
-*/ 
-
-int atoloc(char *locstr, struct dnsloc *loc)
-{
-  int dir = 0;
-  int i, t;
-
-  /* set defaults */
-  int tmp_hpre = 1000000;   // default 10km = 1000000cm
-  int tmp_vpre = 1000000;   // default 10km = 1000000cm
-  int tmp_size = 100;           // default 1m   = 100cm
-  loc->latitude = 1 << 31;
-  loc->longitude = 1 << 31;
-  loc->altitude = 10000000; // default sealevel = 1000000cm
-
-  cp = locstr;
-  if(!skip_spaces()) 
-    return -1;
+  }
   
-  /* latitude */
-  if(!skip_spaces()) 
-    return -1;
-  
-  if((i = get_num('.', 90)) == -1)
-    return -1;
-  t = i * 60 * 60 * 1000;
-  cp++;
-  
-  if((i = get_numl(' ', 9999999, 7)) == -1)
-    return -1;
-  t += i * 60 * 60 * 1000 / 1000000; 
- 
-  if(!skip_spaces()) 
-    return -1;
- 
-  if(*cp++ == 'N') 
-    loc->latitude += t;
-  else 
-    loc->latitude -= t;
-  
-  /* longitude */
-  if(!skip_spaces()) 
-    return -1;
-
-
-  if((i = get_num('.', 180)) == -1)
-    return -1;
-  t = i * 60 * 60 * 1000;
-  cp++;
-
-  if((i = get_numl(' ', 9999999, 7)) == -1)
-    return -1;
-  t += i * 60 * 60 * 1000 / 1000000; 
- 
-  if(!skip_spaces()) 
-    return -1;
-  
-  if(*cp++ == 'W') 
-    loc->longitude -= t;
-  else 
-    loc->longitude += t;
-
   /* altitude */
-  if(!skip_spaces()) 
-    return 0;
-
-  /* get sign */
-  if(*cp == '-') 
-    {
-      dir = -1; 
-      cp++;
-      if(*cp == '\0') 
-	return 0;
-    }
-  else 
-    dir = 1;
-
-  if((i = get_num(' ', 10000000)) == -1)
-    return 0;
-  loc->altitude += i * dir;
+  if (*cp == '-') {
+    altsign = -1;
+    cp++;
+  }
   
+  if (*cp == '+')
+    cp++;
   
-  /* size */
-  if(!skip_spaces()) 
-    return 0;
-  if((tmp_size = get_num(' ', 2000000000)) == -1)
-    return 0;
-  loc->size = ntolocexp(tmp_size);
+  while (isdigit(*cp))
+    altmeters = altmeters * 10 + (*cp++ - '0');
+    
+  alt = (10000000 + (altsign * altmeters));
   
+  while (!isspace(*cp) && (cp < maxcp))
+    /* if trailing garbage or m */
+    cp++;
   
-  /* hpre */
-  if(!skip_spaces())
-    return 0;
-  if((tmp_hpre = get_num(' ', 2000000000)) == -1)
-    return 0;
-  loc->hpre = ntolocexp(tmp_hpre);
+  while (isspace(*cp) && (cp < maxcp))
+    cp++;
   
+  if (cp >= maxcp)
+    goto defaults;
   
-  /* vpre */
-  if(!skip_spaces())
-    return 0;
-  if((tmp_vpre = get_num(' ', 2000000000)) == -1)
-    return 0;
-  loc->vpre = ntolocexp(tmp_vpre);
+  siz = precsize_aton(&cp);
   
-  return 0;
+  while (!isspace(*cp) && (cp < maxcp))/*if trailing garbage or m*/
+    cp++;
+  
+  while (isspace(*cp) && (cp < maxcp))
+    cp++;
+  
+  if (cp >= maxcp)
+    goto defaults;
+  
+  hp = precsize_aton(&cp);
+  
+  while (!isspace(*cp) && (cp < maxcp))/*if trailing garbage or m*/
+    cp++;
+  
+  while (isspace(*cp) && (cp < maxcp))
+    cp++;
+  
+  if (cp >= maxcp)
+    goto defaults;
+  
+  vp = precsize_aton(&cp);
+  
+ defaults:
+  
+  loc->size = siz;
+  loc->hpre = hp;
+  loc->vpre = vp;
+  loc->latitude = latit;
+  loc->longitude = longit;
+  loc->altitude = alt;
+  
+  return (1);            /* size of RR in octets */
 }
 
-int loctoa(struct dnsloc *loc, stralloc *sa)
-{
-  int i, t;
-  char c, dir;
-  char str[FMT_ULONG];
-
-  /* loc */
-  if(loc->latitude > 1<<31)
-    {
-      loc->latitude -= 1<<31;
-      dir = 'N';
-    }
+/* takes an on-the-wire LOC RR and prints it in zone file
+ * (human readable) format. */
+char *loc_ntoa(struct loc_s *loc, stralloc *sa)
+{   
+  int latdeg, latmin, latsec, latsecfrac;
+  int longdeg, longmin, longsec, longsecfrac;
+  char northsouth, eastwest;
+  int altsign;
+  
+  const int referencealt = 10000000;
+  
+  int32_t latval, longval, altval;
+      
+  latval = (loc->latitude - ((unsigned)1<<31));
+  longval = (loc->longitude - ((unsigned)1<<31));
+  
+  if (loc->altitude < referencealt) { /* below WGS 84 spheroid */
+    altval = referencealt - loc->altitude;
+    altsign = -1;
+  } else {
+    altval = loc->altitude - referencealt;
+    altsign = 1;
+  }
+  
+  if (latval < 0) {
+    northsouth = 'S';
+    latval = -latval;
+  }
   else
-    {
-      loc->latitude = 1<<31 - loc->latitude;
-      dir = 'S';
-    }
-
-  t = loc->latitude / (1000 * 60 * 60);
-  stralloc_catb(sa,str, fmt_ulong(str, t));
-
-  stralloc_append(sa, " ");
-  stralloc_append(sa, &dir);
-  stralloc_append(sa, " ");
-
-  /* longitude */
-  t = loc->longitude / (1000 * 60 * 60);
-  stralloc_catb(sa,str, fmt_ulong(str, t));
+    northsouth = 'N';
   
-
-  /* size */
-  c = (char) ((loc->size & 0xf0) >> 4) + '0';
-  stralloc_append(sa, &c);
-  c = (char) (loc->size & 0x0f);
-  for(i = 0; i < c ; i++)
-    stralloc_append(sa, "0");
+  latsecfrac = latval % 1000;
+  latval = latval / 1000;
+  latsec = latval % 60;
+  latval = latval / 60;
+  latmin = latval % 60;
+  latval = latval / 60;
+  latdeg = latval;
   
-  stralloc_append(sa, " ");
+  if (longval < 0) {
+    eastwest = 'W';
+    longval = -longval;
+  }
+  else
+    eastwest = 'E';
+  
+  longsecfrac = longval % 1000;
+  longval = longval / 1000;
+  longsec = longval % 60;
+  longval = longval / 60;
+  longmin = longval % 60;
+  longval = longval / 60;
+  longdeg = longval;
+  
+  altval = altval * altsign;
 
-  /* hpre */
-  c = (char) ((loc->hpre & 0xf0) >> 4) + '0';
-  stralloc_append(sa, &c);
-  c = (char) (loc->hpre & 0x0f);
-  for(i = 0; i < c ; i++)
-    stralloc_append(sa, "0");
-
-  stralloc_append(sa, " ");
-
-  /* vpre */
-  c = (char) ((loc->vpre & 0xf0) >> 4) + '0';
-  stralloc_append(sa, &c);
-  c = (char) (loc->vpre & 0x0f);
-  for(i = 0; i < c ; i++)
-    stralloc_append(sa, "0");
+  stralloc_readyplus(sa, 123);
+  snprintf(&sa->s[sa->len], 128,
+	  "%d %.2d %.2d.%.3d %c %d %.2d %.2d.%.3d %c %d %d %d %d",
+	  latdeg, latmin, latsec, latsecfrac, northsouth,
+	  longdeg, longmin, longsec, longsecfrac, eastwest,
+	  altval, precsize_eton(loc->size), 
+	  precsize_eton(loc->hpre), precsize_eton(loc->vpre));
+ 
+  
+  return (sa->s);
 }
-
-int main()
-{
-  struct dnsloc loc;
-  stralloc s = {0};
-
-  atoloc("42.123952 N 71.3456 W -2400 512 21334 1245", &loc);
-  loctoa(&loc, &s);
-
-  return 0;
-}
-
-
-
 
 
 
