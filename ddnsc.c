@@ -1,8 +1,13 @@
-/* $Id: ddnsc.c,v 1.7 2000/04/30 23:03:18 drt Exp $
+/* $Id: ddnsc.c,v 1.8 2000/05/02 22:53:49 drt Exp $
  *
  * client for ddns
  * 
  * $Log: ddnsc.c,v $
+ * Revision 1.8  2000/05/02 22:53:49  drt
+ * Changed keysize to 256 bits
+ * cleand code a bit and removed a lot of cruft
+ * some checks for errors
+ *
  * Revision 1.7  2000/04/30 23:03:18  drt
  * Unknown user is now communicated by using uid == 0
  *
@@ -27,87 +32,76 @@
  *
  */
 
+#include <stdlib.h>    /* random, clock */
+#include <time.h>      /* time */
+#include <unistd.h>    /* close, getpid, getppid */
 
 #include "buffer.h"
+#include "byte.h"
 #include "env.h"
 #include "error.h"
 #include "fmt.h"
+#include "ip4.h"
+#include "pad.h"
+#include "scan.h"
 #include "stralloc.h"
 #include "strerr.h"
+#include "timeoutread.h"
 #include "timeoutwrite.h"
+#include "txtparse.h"
 
 #include "mt19937.h"
 #include "rijndael.h"
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsc.c,v 1.7 2000/04/30 23:03:18 drt Exp $";
+static char rcsid[] = "$Id: ddnsc.c,v 1.8 2000/05/02 22:53:49 drt Exp $";
 
 #define FATAL "ddnsc: "
 
-char *key = "geheimgeheimgehe";
+stralloc key = {0};
+
+int fd;
+buffer b;
+char bspace[1024];
+char netreadspace[128];
 
 void die_usage(void)
 {
   strerr_die1x(111, "usage: ddnsc uid ip (s|r|k)");
 }
-void die_parse(void)
-{
-  strerr_die2sys(111,FATAL,"unable to parse AXFR results: ");
-}
-void die_netread(void)
-{
-  strerr_die2sys(111,FATAL,"unable to read from network: ");
-}
-void die_netwrite(void)
-{
-  strerr_die2sys(111,FATAL,"unable to write to network: ");
-}
-
-void die_write(void)
-{
-  strerr_die2sys(111,FATAL,"unable to write: ");
-}
 
 int saferead(int fd,char *buf,unsigned int len)
 {
   int r;
-  r = timeoutread(60,fd,buf,len);
-  if (r == 0) { errno = error_proto; die_parse(); }
-  if (r <= 0) die_netread() ;
+
+  r = timeoutread(120,fd,buf,len);
+  if (r == 0) 
+    { 
+      errno = error_proto; 
+      strerr_die2sys(111, FATAL, "unable to read from server ");
+    }
+  
+  if (r <= 0) 
+    strerr_die2sys(111, FATAL, "unable to read from server ");
+
   return r;
 }
 
 int safewrite(int fd,char *buf,unsigned int len)
 {
   int r;
-  r = timeoutwrite(60,fd,buf,len);
-  if (r <= 0) die_netwrite();
+  
+  r = timeoutwrite(60, fd, buf, len);
+  if (r <= 0) 
+    strerr_die2sys(111, FATAL, "unable to write to network: ");
+  
   return r;
 }
-char netreadspace[1024];
-buffer netread = BUFFER_INIT(saferead,6,netreadspace,sizeof netreadspace);
-char netwritespace[1024];
-buffer netwrite = BUFFER_INIT(safewrite,7,netwritespace,sizeof netwritespace);
 
-void netget(char *buf,unsigned int len)
-{
-  int r;
-
-  while (len > 0) {
-    r = buffer_get(&netread,buf,len);
-    buf += r; len -= r;
-  }
-}
-
-int fd;
-buffer b;
-char bspace[1024];
-
-void put(char *buf,unsigned int len)
-{
-  if (buffer_put(&b,buf,len) == -1) die_write();
-}
+buffer netread = BUFFER_INIT(saferead, 6, netreadspace, sizeof netreadspace);
+char netwritespace[128];
+buffer netwrite = BUFFER_INIT(safewrite, 7, netwritespace, sizeof netwritespace);
 
 void dump_packet(struct ddnsreply *p, char *info)
 {
@@ -126,24 +120,21 @@ void dump_packet(struct ddnsreply *p, char *info)
   buffer_flush(buffer_2);  
 }
 
-
 /* read, decode and decrypt packet */
 int ddnsc_recive(struct ddnsreply *p)
 {
   int r;
-  struct taia t;
-  struct ddnsreply ptmp = { 0 };
-  stralloc data = { 0 };
+  struct ddnsreply ptmp = {0};
 
-  r = timeoutread(60, 6, &ptmp, sizeof(struct ddnsreply));
-  /* XXX: check result */
-
+  r = timeoutread(120, 6, &ptmp, sizeof(struct ddnsreply));
+  if(r != 68)
+    strerr_die1x(100, "wrong packetsize");
+  
   uint32_unpack((char*) &ptmp.uid, &p->uid);
   
   /* XXX: check for my own userid */
-
-  /* initialize rijndael with 256 bit blocksize and 128 bit keysize */
-  rijndaelKeySched(8, 4, key);
+  
+  /* the key should be set up by ddnsc_send already */
   
   /* decrypt with rijndael */
   rijndaelDecrypt((char *) &ptmp.type);
@@ -155,25 +146,22 @@ int ddnsc_recive(struct ddnsreply *p)
   tai_unpack((char*) &ptmp.leasetime, &p->leasetime);
 
   if(p->uid == 0)
-    {
-        strerr_die1x(100, "user unknown to server"); 
-    }
+    strerr_die1x(100, "user unknown to server"); 
 
   if(p->magic != DDNS_MAGIC)
     {
       dump_packet(p, "achtung baby");
-      strerr_die1x(100,"wrong magic");
+      strerr_die1x(100, "wrong magic");
     }
   
   return p->type;
 }
 
-
 /* fill p with random, timestamp, magic, encrypt it and send it */
 static void ddnsc_send(struct ddnsrequest *p)
 {
   struct taia t;
-  struct ddnsrequest ptmp = { 0 };
+  struct ddnsrequest ptmp = {0};
 
   /* fill our structure */
   /* and get it into network byte order */
@@ -197,8 +185,8 @@ static void ddnsc_send(struct ddnsrequest *p)
   ptmp.reserved1 = randomMT() & 0xff;;
   ptmp.reserved2 = randomMT() & 0xffff;
 
-  /* initialize rijndael with 256 bit blocksize and 128 bit keysize */
-  rijndaelKeySched(8, 4, key);
+  /* initialize rijndael with 256 bit blocksize and 256 bit keysize */
+  rijndaelKeySched(8, 8, key.s);
     
   /* Encrypt with rijndael */
   rijndaelEncrypt((char *) &ptmp.type);
@@ -208,24 +196,15 @@ static void ddnsc_send(struct ddnsrequest *p)
   buffer_flush(&netwrite); 
 }
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
-  struct ddnsrequest p = { 0 };
-  struct ddnsreply r = { 0 };
-  unsigned char *remotehost, *remoteinfo, *remoteip, *remoteport;
-  unsigned char query[256] = {0};
-  unsigned char clean_query[256] = {0};
-  unsigned char *qptr = NULL;
-  unsigned char *qptr2 = NULL;
-  unsigned char ip[4] = { 0 };
-  uint32 uid;
-  int len, query_len;
-  int fd = 0;
+  struct ddnsrequest p = {0};
+  struct ddnsreply r = {0};
+  unsigned char ip[4] = {0};
+  uint32 uid = 0;
   int a;
-  stralloc answer = {0};
+  char *x;
   char strnum[FMT_ULONG];
-  struct tai t;
-  uint32 u;
 
   /* seed some entropy into the MT */
   seedMT((long long) getpid () *
@@ -234,36 +213,42 @@ main(int argc, char **argv)
 	 (long long) random() * 
 	 (long long) clock());
 
-
   if(argc != 4)
-    {
-      die_usage();
-    }
+    die_usage();
+  
+  scan_ulong(argv[1], &uid);
+  if(!uid) die_usage();
 
-  a = scan_ulong(argv[1], &uid);
   a = ip4_scan(argv[2], ip);
+  if((uint32 *)ip == 0) die_usage();
   
   if(*argv[3] == 's')
-    {
-      p.type = DDNS_T_SETENTRY;
-    }
+    p.type = DDNS_T_SETENTRY;
   else if(*argv[3] == 'r')
-    {
-      p.type = DDNS_T_RENEWENTRY;
-    }
+    p.type = DDNS_T_RENEWENTRY;
   else if(*argv[3] == 'k')
-    {
-      p.type = DDNS_T_KILLENTRY;
-    }
+    p.type = DDNS_T_KILLENTRY;
   else 
-    {
-      die_usage();
-    }
+    die_usage();
   
+  /* get key from enviroment */
+  x = env_get("KEY");
+  if (!x)
+    {
+      strerr_die2x(111, FATAL, "$KEY not set");
+    }
+
+  stralloc_copys(&key, x);
+  txtparse(&key);
+  pad(&key, 16);
+
   p.uid = uid;
   byte_copy(&p.ip4, 4, ip);
 
+  /* send request */
   ddnsc_send(&p);
+
+  /* get answer */
   ddnsc_recive(&r);
 
   switch(r.type)
@@ -302,5 +287,5 @@ main(int argc, char **argv)
     }
   buffer_flush(buffer_1);  
   
-  exit(0);
+  return 0;
 }
