@@ -1,9 +1,13 @@
-/* $Id: ddns-cleand.c,v 1.1 2000/05/02 06:23:57 drt Exp $
+/* $Id: ddns-cleand.c,v 1.2 2000/05/02 08:03:14 drt Exp $
  *  --drt@ailis.de
  *
  * queue cleaning daemon for ddns
  * 
  * $Log: ddns-cleand.c,v $
+ * Revision 1.2  2000/05/02 08:03:14  drt
+ * dropping root, deleting empty files,
+ * code cleanups
+ *
  * Revision 1.1  2000/05/02 06:23:57  drt
  * ddns-cleand added
  *
@@ -17,6 +21,7 @@
 #include "buffer.h"
 #include "byte.h"
 #include "cdb.h"
+#include "droproot.h"
 #include "error.h"
 #include "fmt.h"
 #include "getln.h"
@@ -30,8 +35,9 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddns-cleand.c,v 1.1 2000/05/02 06:23:57 drt Exp $";
+static char rcsid[] = "$Id: ddns-cleand.c,v 1.2 2000/05/02 08:03:14 drt Exp $";
 
+/* maximum number of fields in a line */
 #define NUMFIELDS 10
 
 static char datadir[] = "dnsdata";
@@ -40,7 +46,7 @@ struct cdb c;
 
 void nomem(void)
 {
-  strerr_die1sys(111, "ddnsqd fatal: no memory");
+  strerr_die1sys(111, "ddns-cleand fatal: no memory");
 }
  
 void syntaxerror(char *file, char *why)
@@ -60,24 +66,25 @@ void syntaxerror(char *file, char *why)
 
 int dofile(char *file, time_t ctime)
 {
-  int r, i, j, k;
-  int fd;
-  char cdbkey[4];
-  buffer b;
   char bspace[1024];
-  stralloc line = { 0 };
-  stralloc data = { 0 };
-  int match = 1;
+  char cdbkey[4];
   char ch;
-  uint32 uid = 0;
-  uint32 ttl = 17;
-  stralloc f[NUMFIELDS] = {{0}};
   char strnum[FMT_ULONG];
+  int fd;
+  int match = 1;
+  int r, i, j, k;
+  uint32 ttl = 17;
+  uint32 uid = 0;
+  buffer b;
+  stralloc data = { 0 };
+  stralloc line = { 0 };
+  stralloc f[NUMFIELDS] = {{0}};
 
   fd = open_read(file);
   if (fd == -1) 
     {
-      strerr_warn2("unable to open file: ", file, &strerr_sys);
+      strerr_warn3("unable to open file: ", file, " ", &strerr_sys);
+      return -1;
     }
   
   buffer_init(&b, read, fd, bspace, sizeof bspace);
@@ -91,8 +98,8 @@ int dofile(char *file, time_t ctime)
       ++linenum;
       if(getln(&b, &line, &match, '\n') == -1)
 	{
-	  strerr_warn2("unable to read line: ", file, &strerr_sys);
-	  break;
+	  strerr_warn3("unable to read line: ", file, " ", &strerr_sys);
+	  return -1;
 	}
       
       /* clean up line end */
@@ -102,10 +109,18 @@ int dofile(char *file, time_t ctime)
 	  if ((ch != ' ') && (ch != '\t') && (ch != '\n')) break;
 	  --line.len;
 	}
-      if(!line.len) continue;
       
+      /* skip empty lines */
+      if(!line.len) 
+	{
+	  continue;
+	}
+
       /* skip comments */
-      if(line.s[0] == '#') continue;
+      if(line.s[0] == '#')
+	{
+	  continue;
+	}
       
       /* split line into seperate fields */
       j = 0;
@@ -113,12 +128,18 @@ int dofile(char *file, time_t ctime)
 	{
 	  if (j >= line.len) 
 	    {
-	      if (!stralloc_copys(&f[i],"")) nomem();
+	      if (!stralloc_copys(&f[i],"")) 
+		{
+		  nomem();
+		}
 	    }
 	  else 
 	    {
 	      k = byte_chr(line.s + j,line.len - j,':');
-	      if (!stralloc_copyb(&f[i],line.s + j,k)) nomem();
+	      if (!stralloc_copyb(&f[i],line.s + j,k)) 
+		{
+		  nomem();
+		}
 	      j += k + 1;
 	    }
 	}
@@ -126,6 +147,7 @@ int dofile(char *file, time_t ctime)
       if(line.s[0] == '=')
 	{	 
 	  scan_xlong(f[1].s, &uid); 
+
 	  if(uid == 0)
 	    {
 	      syntaxerror(file, "can't parse uid");
@@ -158,22 +180,24 @@ int dofile(char *file, time_t ctime)
 		}
 	    }
 	  
-	  if(now() - ctime > ttl)
+	  /* delete empty files or files which are expired */
+	  if((now() - ctime > ttl) || (match == 0 && linenum == 1))
 	    {
 	      if(unlink(file) != 0)
 		{
-		  strerr_warn2("error: can't unlink() ", file, &strerr_sys);
+		  strerr_warn3("error: can't unlink() ", file, " ", &strerr_sys);
 		}
 	      else
 		{
-		  strnum[fmt_ulong(strnum,linenum)] = 0;
+		  strnum[fmt_ulong(strnum, uid)] = 0;
 		  buffer_puts(buffer_2, "cleaned ");
 		  buffer_puts(buffer_2, file);
-		  buffer_puts(buffer_2, " (");
+		  buffer_puts(buffer_2, " (0x");
 		  buffer_puts(buffer_2, strnum);
 		  buffer_puts(buffer_2, ")\n");
 		  buffer_flush(buffer_2);
-		  break;
+		  /* the file is deleted so we don't have to read further from it */
+		  return 0;
 		}
 	    }
 	}
@@ -186,19 +210,26 @@ int dofile(char *file, time_t ctime)
 
 int dodir(char *dirname)
 {
+  stralloc name = {0};
   DIR *dir = NULL;
   struct dirent *x = NULL;
-  stralloc name = {0};
   struct stat st = {0};
 
   dir = opendir(dirname);
   if(dir == NULL)
     {
-      strerr_warn2("can't opendir() ", dirname, &strerr_sys);
+      strerr_warn3("can't opendir() ", dirname, " ", &strerr_sys);
+      return -1;
     }
 
   while (x = readdir(dir))
     {
+      if(x == NULL)
+	{
+	  strerr_warn3("can't readdir() ", dirname, " ", &strerr_sys);
+	  return -1;
+	}
+
       /* Ignore everything starting with a . */
       if(x->d_name[0] != '.')
 	{ 
@@ -222,7 +253,7 @@ int dodir(char *dirname)
 	    }
 	  else
 	    {
-	      strerr_warn2(x->d_name, " no dir and no regular file", &strerr_sys);
+	      strerr_warn2(x->d_name, " no dir and no regular file ", &strerr_sys);
 	    }
 	}
     }
@@ -238,12 +269,14 @@ int main()
   int fd;
 
   /* chroot() to $ROOT and switch to $UID:$GID */
-  //  droproot("dffingerd: ");
+  droproot("ddns-cleand: ");
 
   sig_alarmcatch(sigalrm);
   
   for (;;)
     {
+      /* we reopen data.cdb for every pass over the database */
+
       fd = open_read("data.cdb");
       if (fd == -1) 
 	{
