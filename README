@@ -1,0 +1,39 @@
+Setting up a client:
+
+You have know your DDNS-UID (100 in this example) and your shared
+secret ('superNikNik' in theis example.  After you fired up your
+internet connection try someting like
+
+$ DDNS_SERVER_ADDR=c0re.rc23.cx \
+  DDNS_SERVER_PORT=3456 \
+  DDNS_UID=100 \
+  KEY="superNikNik" \ 
+  ./ddns-clientd 1.2.3.4 0 50 57 9.7 N 6 54 08.3 E 5700 5000 1500 5000
+
+This assumes your IP is 1.2.3.4 and you have no IPv6 Address, which
+means 0.  Your Location is Vogelsangerstr. 286 in Cologne at 57m
+altitude and your facility is 50m in diameter. The Number is acurate
+to 15m in horizontal and 50m in vertical direction.  The last three
+numbers can be left out. I assume you use a ddns Server running at
+c0re.rc23.cx:3456.
+
+ddns-clientd will now connect to the server and register there. It
+will sleep a server specified amount of time (at the moment 90s) and
+renew its registration. If it recives SIGTERM it will deregister and
+exit.
+
+now try:
+
+$ nslookup myname.dyn.rc23.cx
+Server:  localhost
+Address:  127.0.0.1
+
+Non-authoritative answer:
+Name:    myname.dyn.rc23.cx
+Address:  1.2.3.4
+
+Welcome to the exciting world of dynamic dns!
+
+... more to follow
+
+drt@ailis.de
