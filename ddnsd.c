@@ -1,8 +1,11 @@
-/* $Id: ddnsd.c,v 1.15 2000/07/13 18:20:47 drt Exp $
+/* $Id: ddnsd.c,v 1.16 2000/07/14 14:49:37 drt Exp $
  *
  * server for ddns - this file is to long
  * 
  * $Log: ddnsd.c,v $
+ * Revision 1.16  2000/07/14 14:49:37  drt
+ * ddnsd ignires IP-adresses which are set to 0
+ *
  * Revision 1.15  2000/07/13 18:20:47  drt
  * everything supports now DNS LOC
  *
@@ -93,7 +96,7 @@
 
 #include "ddns.h"
 
-static char rcsid[] = "$Id: ddnsd.c,v 1.15 2000/07/13 18:20:47 drt Exp $";
+static char rcsid[] = "$Id: ddnsd.c,v 1.16 2000/07/14 14:49:37 drt Exp $";
 
 static char *datadir;
 
@@ -427,18 +430,27 @@ void ddnsd_setentry( struct ddnsrequest *p)
   
   /* write data to file */
   buffer_init(&ssout,write, fd, outbuf, sizeof outbuf);
+
   /* ip4 */
-  buffer_puts(&ssout, "=,");
-  buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip4));
-  buffer_puts(&ssout, ",");
-  buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
-  buffer_puts(&ssout, "\n");
+  if(byte_diff(p->ip4, 4, "\0\0\0\0"))
+    {
+      buffer_puts(&ssout, "=,");
+      buffer_put(&ssout, strip, ip4_fmt(strip, (char *) &p->ip4));
+      buffer_puts(&ssout, ",");
+      buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
+      buffer_puts(&ssout, "\n");
+    }
+
   /* ip6 */
-  buffer_puts(&ssout, "6,");
-  buffer_put(&ssout, strip, ip6_fmt(strip, (char *) &p->ip6));
-  buffer_puts(&ssout, ",");
-  buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
-  buffer_puts(&ssout, "\n");
+  if(byte_diff(p->ip6, 16, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"))
+    {
+      buffer_puts(&ssout, "6,");
+      buffer_put(&ssout, strip, ip6_fmt(strip, (char *) &p->ip6));
+      buffer_puts(&ssout, ",");
+      buffer_put(&ssout, strnum, fmt_ulong(strnum, p->uid));
+      buffer_puts(&ssout, "\n");
+    }
+
   /* LOC */
   buffer_puts(&ssout, "L,");
   tb[0] = 0;

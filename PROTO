@@ -120,9 +120,11 @@ magic		a 32 bit value identifing dmailb has to be 0xC0DECAFE.
 		If this contains an other value this may be
 		interpreted as an failed decryption.
 	
-ip4		a 32 bit IPv4 address as a string of bytes
+ip4		a 32 bit IPv4 address as a string of bytes. If all bytes
+ 		are set to zero the server will not set a ipv4 record.
 
-ip6		a 128 bit IPv6 address as a string of bytes
+ip6		a 128 bit IPv6 address as a string of bytes. If all bytes
+ 		are set to zero the server will not set a ipv4 record.
 
 reserved,	reserved for further use. Should be filled with random
 reserved2	by the client for now.
@@ -130,8 +132,7 @@ reserved2	by the client for now.
 loc_*           the location of the client in notion of a DNS LOC
 		record. If the client doesn't want to reveal his
 		position he is asked to define the whole earth as the
-		area he is in. If this can't be done all values may be
-		set to zero. 
+		area he is in.
 
 timestamp  	a 128 bit high precision timestamp inspired from DJBs
 		libtai struct taia. it consists of a uint64 for
