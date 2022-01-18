@@ -1,3 +1,5 @@
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+
 This is Relase 0.1 "Hak-Nam" of ddns.
 Up to now the client and the basic server components are 
 tested and usable. ddns-clientd, ddnsd, ddns-cleand, filedns
